@@ -1,0 +1,26 @@
+[
+  {
+    "id": "U-1771009611430",
+    "name": "Ashmit Shivansh",
+    "email": "ashmitgupta113@gmail.com",
+    "password": "shivansh",
+    "role": "client",
+    "createdAt": "2026-02-13T19:06:51.430Z"
+  },
+  {
+    "id": "U-1771009782600",
+    "name": "shfvhvgflkhswvgk",
+    "email": "kjsadbkjasbfdasfkjdbadkfb@gmail.com",
+    "password": "askdjfbkasjdf",
+    "role": "client",
+    "createdAt": "2026-02-13T19:09:42.600Z"
+  },
+  {
+    "id": "U-1771010685362",
+    "name": "ashmit",
+    "email": "ashmitblah@gmail.com",
+    "password": "lmao",
+    "role": "client",
+    "createdAt": "2026-02-13T19:24:45.362Z"
+  }
+]
