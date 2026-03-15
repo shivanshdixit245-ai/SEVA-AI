@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
-import { getServerUser, sanitizeText } from '@/lib/auth';
+import { getServerUser, sanitizeText, resolveToUuid } from '@/lib/auth';
 import { DirectMessage } from '@/types/booking';
 
 // Memory Cache for ultra-fast "instant" chat history
@@ -12,12 +12,16 @@ export async function GET(request: NextRequest) {
     try {
         const user = await getServerUser(request);
         const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('userId');
-        const helperId = searchParams.get('helperId');
+        const rawUserId = searchParams.get('userId');
+        const rawHelperId = searchParams.get('helperId');
 
-        if (!userId || !helperId) {
+        if (!rawUserId || !rawHelperId) {
             return NextResponse.json({ error: 'Missing userId or helperId' }, { status: 400 });
         }
+
+        // Resolve Slugs to UUIDs
+        const userId = await resolveToUuid(rawUserId) || rawUserId;
+        const helperId = await resolveToUuid(rawHelperId) || rawHelperId;
 
         // SECURITY: Verify session and involvement in the conversation
         const isAdmin = user?.role === 'admin';
@@ -74,7 +78,11 @@ export async function POST(request: NextRequest) {
     try {
         const user = await getServerUser(request);
         const messageData = await request.json();
-        const { senderId, receiverId, content, bookingId } = messageData;
+        const { senderId: rawSenderId, receiverId: rawReceiverId, content, bookingId } = messageData;
+
+        // Resolve Slugs to UUIDs
+        const senderId = await resolveToUuid(rawSenderId) || rawSenderId;
+        const receiverId = await resolveToUuid(rawReceiverId) || rawReceiverId;
 
         // SECURITY: Verify session and that the sender is the authenticated user
         if (!user && process.env.NODE_ENV === 'production') {
@@ -124,6 +132,8 @@ export async function POST(request: NextRequest) {
             const safeSenderId = String(senderId).toLowerCase().trim();
             const safeReceiverId = String(receiverId).toLowerCase().trim();
             const channelName = `dm-${[safeSenderId, safeReceiverId].sort().join('-')}`;
+            
+            console.log(`[API REALTIME] Broadcasting to ${channelName}`);
             
             const channel = supabaseAdmin.channel(channelName);
             await channel.send({

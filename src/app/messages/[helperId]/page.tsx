@@ -147,31 +147,23 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
     useEffect(() => {
         if (!user) return;
 
-        // CRITICAL FIX: Determine the best ID to use for the broadcast channel.
-        // 1. If we have the helper profile, use its supabaseId.
-        // 2. Otherwise, check if the URL param helperId looks like a UUID.
-        // 3. Fallback to the raw helperId (slug).
+        // CRITICAL FIX: Ensure we use the verified UUID for the channel name.
         const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
         
         let resolvedPeerId = helper?.supabaseId || (isUUID(helperId) ? helperId : null);
         
-        // If we still don't have a UUID and we haven't loaded the helper yet, 
-        // we should wait for the helper profile to avoid joining a slug-based channel 
-        // that the worker (on a UUID channel) won't see.
-        if (!resolvedPeerId && !helper && !isUUID(helperId)) {
-            console.log('[REALTIME DEBUG] Delaying channel join until helper profile (and UUID) is resolved...');
+        // If the URL has a slug and we haven't loaded the profile yet, wait.
+        if (!resolvedPeerId && !isUUID(helperId)) {
+            console.log('[REALTIME DEBUG] Delaying channel join until Peer UUID is resolved...');
             return;
         }
 
         const finalPeerId = resolvedPeerId || helperId;
-
         const safeClientId = String(user.id).toLowerCase().trim();
         const safeHelperId = String(finalPeerId).toLowerCase().trim();
         const channelName = `dm-${[safeClientId, safeHelperId].sort().join('-')}`;
         
-        console.log(`[REALTIME DEBUG] Client joining: ${channelName}`);
-        console.log(`[REALTIME DEBUG] Client ID: ${safeClientId}`);
-        console.log(`[REALTIME DEBUG] Peer ID: ${safeHelperId} (Resolved as: ${finalPeerId === helperId ? 'Raw/Slug' : 'UUID'})`);
+        console.log(`[REALTIME DEBUG] Client joining ${channelName} with Peer ID: ${safeHelperId}`);
         
         const channel = supabase.channel(channelName, {
             config: {
@@ -188,12 +180,10 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
                     if (prev.find(m => m.id === record.id)) return prev;
                     return [...prev, record];
                 });
-                // Fast scroll for real-time messages
                 setTimeout(() => scrollToBottom(true), 10);
             })
             .on('broadcast', { event: 'typing' }, ({ payload }) => {
-                // Ensure we check against both possible IDs for the peer
-                if (payload.senderId === finalPeerId || payload.senderId === helperId) {
+                if (payload.senderId === finalPeerId) {
                     setIsTyping(payload.isTyping);
                     if (payload.isTyping) {
                         setTimeout(scrollToBottom, 50);

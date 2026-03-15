@@ -127,13 +127,24 @@ export default function WorkerChatsPage() {
     useEffect(() => {
         if (!user || !selectedThread) return;
         
+        const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+        
+        // Ensure we always join using a UUID for the Peer
+        let resolvedClientId = isUUID(selectedThread.clientId) ? selectedThread.clientId : null;
+
+        // If not a UUID, we must wait or the broadcast will fail to sync with the client.
+        if (!resolvedClientId) {
+            console.log('[REALTIME DEBUG] Worker delaying channel join until Client UUID is verified...');
+            // We can try to fetch the profile to get the UUID if needed, 
+            // but for now we'll just wait for the selectThread logic to potentially handle it.
+            return;
+        }
+
         const safeWorkerId = String(user.id).toLowerCase().trim();
-        const safeClientId = String(selectedThread.clientId).toLowerCase().trim();
+        const safeClientId = String(resolvedClientId).toLowerCase().trim();
         const channelName = `dm-${[safeWorkerId, safeClientId].sort().join('-')}`;
         
-        console.log(`[REALTIME DEBUG] Worker joining: ${channelName}`);
-        console.log(`[REALTIME DEBUG] Worker ID: ${safeWorkerId}`);
-        console.log(`[REALTIME DEBUG] Client ID: ${safeClientId}`);
+        console.log(`[REALTIME DEBUG] Worker joining ${channelName} with Peer ID: ${safeClientId}`);
 
         const channel = supabase.channel(channelName, {
             config: {
@@ -145,10 +156,7 @@ export default function WorkerChatsPage() {
                 console.log('[REALTIME DEBUG] Worker received broadcast:', record);
                 
                 // IGNORE our own messages that come back from the API broadcast
-                if (record.senderId === user.id) {
-                    console.log('[REALTIME DEBUG] Ignoring self-broadcast');
-                    return;
-                }
+                if (record.senderId === user.id) return;
                 
                 setMessages(prev => {
                     if (prev.find(m => m.id === record.id)) return prev;
@@ -162,7 +170,7 @@ export default function WorkerChatsPage() {
                 setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
             })
             .on('broadcast', { event: 'typing' }, ({ payload }) => {
-                if (payload.senderId === selectedThread.clientId) {
+                if (payload.senderId === resolvedClientId) {
                     setIsTyping(payload.isTyping);
                     if (payload.isTyping) {
                         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
@@ -203,8 +211,28 @@ export default function WorkerChatsPage() {
         } catch {}
     };
 
-    const handleSelectThread = (thread: ChatThread) => {
+    const handleSelectThread = async (thread: ChatThread) => {
         setSelectedThread(thread);
+        
+        // Resolve UUID if needed
+        const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+        if (!isUUID(thread.clientId)) {
+            console.log('[WHATSAPP SYNC] Worker resolving client UUID:', thread.clientId);
+            try {
+                const res = await fetch(`/api/v1/helpers/${thread.clientId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.supabaseId) {
+                        console.log('[WHATSAPP SYNC] Resolved client UUID:', data.supabaseId);
+                        thread.clientId = data.supabaseId;
+                        setSelectedThread({ ...thread }); // Force re-render with UUID
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to resolve client UUID:', err);
+            }
+        }
+
         fetchMessages(thread.clientId as string);
     };
 

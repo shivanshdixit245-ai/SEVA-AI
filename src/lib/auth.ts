@@ -186,6 +186,34 @@ async function getProfileByEmail(email: string): Promise<UserProfile | null> {
     return null;
 }
 
+/**
+ * Robustly resolves a slug, email, or temporary ID to a Supabase UUID.
+ * Essential for Realtime sync where both parties must agree on the channel name.
+ */
+export async function resolveToUuid(idOrSlug: string): Promise<string | null> {
+    if (!idOrSlug) return null;
+    
+    // Check if it's already a UUID (v4/v5 format)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(idOrSlug)) return idOrSlug;
+
+    try {
+        const db = await getDb();
+        const user = await db.collection('users').findOne({
+            $or: [
+                { slug: idOrSlug },
+                { email: idOrSlug.toLowerCase() },
+                { id: idOrSlug },
+                { supabaseId: idOrSlug }
+            ]
+        });
+        return user?.supabaseId || user?.id || null;
+    } catch (err) {
+        console.error('resolveToUuid Error:', err);
+        return null;
+    }
+}
+
 // ─── Auth Operations ───────────────────────────────────────────────────────
 
 export async function registerUser(
