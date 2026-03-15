@@ -1,0 +1,7 @@
+--- Checking Profiles ---
+ID c4cb74cb-9420-46d1-a51e-6c2cb740d2d3: Error/Not Found: column profiles.full_name does not exist
+ID c4cb74cb-9420-46d1-a51e-6c2c6662f22b: Error/Not Found: column profiles.full_name does not exist
+
+--- Checking Helpers Table ---
+ID c4cb74cb-9420-46d1-a51e-6c2cb740d2d3: Error/Not Found in Helpers: Could not find the table 'public.helpers' in the schema cache
+ID c4cb74cb-9420-46d1-a51e-6c2c6662f22b: Error/Not Found in Helpers: Could not find the table 'public.helpers' in the schema cache

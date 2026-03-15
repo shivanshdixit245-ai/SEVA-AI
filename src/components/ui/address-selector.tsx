@@ -1,40 +1,57 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, Plus, Check } from "lucide-react";
+import { MapPin, Plus, Check, Navigation, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from '@/lib/supabase';
 
-export default function AddressSelector() {
-    const { user } = useAuth();
+interface AddressSelectorProps {
+    onSelect?: (address: string) => void;
+}
+
+export default function AddressSelector({ onSelect }: AddressSelectorProps) {
+    const { user, selectedLocation, setSelectedLocation } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [addresses, setAddresses] = useState<string[]>([]);
-    const [selected, setSelected] = useState("");
     const [newAddress, setNewAddress] = useState("");
     const [isAdding, setIsAdding] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        if (user) {
-            fetchAddresses();
-        } else {
-            // Default for guest/logged out
-            setAddresses(["Delhi, India"]);
-            setSelected("Delhi, India");
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (mounted) {
+            if (user) {
+                fetchAddresses();
+            } else {
+                // Default for guest/logged out
+                setAddresses(["Delhi, India"]);
+                setSelectedLocation("Delhi, India");
+            }
         }
-    }, [user]);
+    }, [user, mounted]);
 
     const fetchAddresses = async () => {
         if (!user) return;
         try {
-            const res = await fetch(`/api/user/addresses?userId=${user.id}`);
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const res = await fetch(`/api/v1/user/addresses?userId=${user.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             if (res.ok) {
                 const data = await res.json();
                 if (data.length > 0) {
                     setAddresses(data);
-                    setSelected(data[0]);
+                    setSelectedLocation(data[0]);
                 } else {
                     setAddresses([]);
-                    setSelected("Add an address");
+                    setSelectedLocation("Add an address");
                 }
             }
         } catch (error) {
@@ -43,23 +60,34 @@ export default function AddressSelector() {
     };
 
     const handleAddAddress = async () => {
-        if (newAddress.trim() && user) {
-            try {
-                const res = await fetch('/api/user/addresses', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user.id, address: newAddress })
-                });
+        if (newAddress.trim()) {
+            const addedAddr = newAddress.trim();
+            // Optimistic Update
+            setAddresses(prev => {
+                if (prev.includes(addedAddr)) return prev;
+                return [...prev, addedAddr];
+            });
+            setSelectedLocation(addedAddr);
+            setNewAddress("");
+            setIsAdding(false);
+            setIsOpen(false);
 
-                if (res.ok) {
-                    const updatedAddresses = await res.json();
-                    setAddresses(updatedAddresses);
-                    setSelected(newAddress);
-                    setNewAddress("");
-                    setIsAdding(false);
+            if (user) {
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const token = session?.access_token;
+
+                    await fetch('/api/v1/user/addresses', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ userId: user.id, address: addedAddr })
+                    });
+                } catch (error) {
+                    console.error("Failed to sync address", error);
                 }
-            } catch (error) {
-                console.error("Failed to add address", error);
             }
         }
     };
@@ -71,7 +99,7 @@ export default function AddressSelector() {
                 className="flex items-center gap-2 px-3 py-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 hover:bg-white/20 transition-all text-xs text-white font-medium min-w-[200px] shadow-sm"
             >
                 <MapPin size={14} className="text-[var(--color-seva-accent)]" />
-                <span className="truncate max-w-[150px]">{selected}</span>
+                <span className="truncate max-w-[150px]">{mounted ? selectedLocation : "Delhi, India"}</span>
             </button>
 
             {isOpen && (
@@ -88,17 +116,18 @@ export default function AddressSelector() {
                                 <button
                                     key={addr}
                                     onClick={() => {
-                                        setSelected(addr);
+                                        setSelectedLocation(addr);
                                         setIsOpen(false);
+                                        onSelect?.(addr);
                                     }}
                                     className={cn(
                                         "w-full text-left px-2 py-2 text-xs rounded-lg flex items-center gap-2 transition-colors",
-                                        selected === addr ? "bg-white/10 text-white font-medium" : "text-white/60 hover:bg-white/5 hover:text-white"
+                                        selectedLocation === addr ? "bg-white/10 text-white font-medium" : "text-white/60 hover:bg-white/5 hover:text-white"
                                     )}
                                 >
                                     <MapPin size={12} />
                                     <span className="truncate">{addr}</span>
-                                    {selected === addr && <Check size={12} className="ml-auto" />}
+                                    {selectedLocation === addr && <Check size={12} className="ml-auto" />}
                                 </button>
                             ))}
                         </div>
@@ -131,13 +160,71 @@ export default function AddressSelector() {
                                     </div>
                                 </div>
                             ) : (
-                                <button
-                                    onClick={() => setIsAdding(true)}
-                                    className="w-full flex items-center justify-center gap-2 text-xs text-[var(--color-seva-accent)] hover:bg-white/5 py-1.5 rounded-lg transition-colors font-medium"
-                                >
-                                    <Plus size={12} />
-                                    Add New Address
-                                </button>
+                                    <div className="flex flex-col gap-2">
+                                        <button
+                                            onClick={async () => {
+                                                if (!navigator.geolocation) {
+                                                    alert("Geolocation is not supported by your browser");
+                                                    return;
+                                                }
+                                                setIsLoading(true);
+                                                navigator.geolocation.getCurrentPosition(
+                                                    async (position) => {
+                                                        const { latitude, longitude } = position.coords;
+                                                        
+                                                        let finalAddr = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+                                                        try {
+                                                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                                                            if (res.ok) {
+                                                                const data = await res.json();
+                                                                finalAddr = data.display_name.split(',').slice(0, 2).join(',');
+                                                            }
+                                                        } catch (e) {}
+                                                        
+                                                        setAddresses(prev => {
+                                                            if (prev.includes(finalAddr)) return prev;
+                                                            return [...prev, finalAddr];
+                                                        });
+                                                        setSelectedLocation(finalAddr);
+                                                        onSelect?.(finalAddr);
+                                                        setIsOpen(false);
+                                                        setIsLoading(false);
+
+                                                        if (user) {
+                                                            try {
+                                                                const { data: { session } } = await supabase.auth.getSession();
+                                                                const token = session?.access_token;
+                                                                await fetch('/api/v1/user/addresses', {
+                                                                    method: 'POST',
+                                                                    headers: { 
+                                                                        'Content-Type': 'application/json',
+                                                                        'Authorization': `Bearer ${token}`
+                                                                    },
+                                                                    body: JSON.stringify({ userId: user.id, address: finalAddr })
+                                                                });
+                                                            } catch (e) {}
+                                                        }
+                                                    },
+                                                    (error) => {
+                                                        setIsLoading(false);
+                                                        alert("Unable to retrieve your location");
+                                                    }
+                                                );
+                                            }}
+                                            disabled={isLoading}
+                                            className="w-full flex items-center justify-center gap-2 text-[10px] text-blue-400 border border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                                        >
+                                            {isLoading ? <Loader2 size={10} className="animate-spin" /> : <Navigation size={10} />}
+                                            {isLoading ? "Fetching..." : "Use Current Location"}
+                                        </button>
+                                        <button
+                                            onClick={() => setIsAdding(true)}
+                                            className="w-full flex items-center justify-center gap-2 text-xs text-[var(--color-seva-accent)] hover:bg-white/5 py-1.5 rounded-lg transition-colors font-medium"
+                                        >
+                                            <Plus size={12} />
+                                            Add New Address
+                                        </button>
+                                    </div>
                             )}
                         </div>
                     </div>

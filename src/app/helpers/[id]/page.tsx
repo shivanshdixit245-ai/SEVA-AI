@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function HelperProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
-    const { user } = useAuth();
+    const { user, selectedLocation, getAuthHeaders } = useAuth();
     const [helper, setHelper] = useState<Helper | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
@@ -22,7 +22,9 @@ export default function HelperProfilePage({ params }: { params: Promise<{ id: st
 
     async function fetchHelper() {
         try {
-            const res = await fetch(`/api/helpers/${id}`);
+            const res = await fetch(`/api/v1/helpers/${id}`, {
+                headers: getAuthHeaders()
+            });
             if (res.ok) {
                 const data = await res.json();
                 setHelper(data);
@@ -51,16 +53,16 @@ export default function HelperProfilePage({ params }: { params: Promise<{ id: st
             const bookingData = {
                 serviceType: helper.skills[0], // Default to primary skill
                 description: `Booking request for ${helper.name}`,
-                location: 'My Location', // Placeholder
+                location: selectedLocation || 'My Location',
                 urgency: 'Normal',
                 helperId: helper.id,
                 price: 500, // Placeholder
                 userId: user.id
             };
 
-            const res = await fetch('/api/bookings', {
+            const res = await fetch('/api/v1/bookings', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(bookingData)
             });
 
@@ -139,6 +141,10 @@ export default function HelperProfilePage({ params }: { params: Promise<{ id: st
                 </div>
 
                 <div className="flex flex-col gap-3 min-w-[200px] relative z-10">
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-center">
+                        <p className="text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-1">Privacy Protected</p>
+                        <p className="text-xs text-white/60">Phone number visible after booking</p>
+                    </div>
                     <button
                         onClick={handleHire}
                         disabled={!helper.isAvailable}
@@ -146,9 +152,12 @@ export default function HelperProfilePage({ params }: { params: Promise<{ id: st
                     >
                         {helper.isAvailable ? 'Hire Now' : 'Currently Busy'}
                     </button>
-                    <button className="w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-semibold border border-white/10 transition-colors">
+                    <Link 
+                        href={`/messages/${helper.id}`}
+                        className="w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-semibold border border-white/10 transition-colors flex items-center justify-center"
+                    >
                         Message
-                    </button>
+                    </Link>
                     {!helper.isAvailable && (
                         <p className="text-red-400 text-xs text-center font-medium bg-red-400/10 py-1 rounded-lg">
                             Not available right now

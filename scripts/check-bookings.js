@@ -1,6 +1,6 @@
 
 const { MongoClient } = require('mongodb');
-require('dotenv').config({ path: '.env.local' });
+// Environment variables should be loaded via node --env-file=.env.local if needed
 
 async function checkBookings() {
     const uri = process.env.MONGODB_URI;

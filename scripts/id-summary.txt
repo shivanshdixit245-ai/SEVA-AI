@@ -1,0 +1,48 @@
+DEBUG LOG ANALYSIS
+==================
+
+Found [2026-03-14T12:57:39.275Z] POST Booking: Enriched booking data with ID: BK-96A81ECC, status: pending_acceptance at line 4465
+Context (-5, +5):
+4460: [2026-03-14T12:54:03.861Z] POST Message: Attempting LOCAL JSON fallback...
+4461: [2026-03-14T12:54:03.862Z] LOCAL FIX: Saved message ba7b3bea-de11-4f07-ab91-cc05b0fc9d74 to local JSON fallback.
+4462: [2026-03-14T12:54:03.863Z] GET Messages: MongoDB connection failed: querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+4463: [2026-03-14T12:54:03.864Z] GET Messages: MongoDB connection failed: querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+4464: [2026-03-14T12:57:39.275Z] POST Booking: Received request for Deep Cleaning from 445e8167-b86c-4f9b-b27c-3a04d4609c41
+4465: [2026-03-14T12:57:39.275Z] POST Booking: Enriched booking data with ID: BK-96A81ECC, status: pending_acceptance
+4466: [2026-03-14T12:57:39.276Z] POST Booking: Attempting to sync to Supabase table: bookings
+4467: [2026-03-14T12:57:39.801Z] POST Booking: Supabase Table 'bookings' Sync Successful
+4468: [2026-03-14T12:57:39.802Z] POST Booking: Firing background MongoDB insert for BK-96A81ECC...
+4469: [2026-03-14T12:57:39.806Z] POST Booking: Returning Success to client with ID: BK-96A81ECC
+4470: [2026-03-14T12:57:45.145Z] GET Messages: MongoDB connection failed: querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+
+------------------
+Found [2026-03-14T12:57:39.802Z] POST Booking: Firing background MongoDB insert for BK-96A81ECC... at line 4468
+Context (-5, +5):
+4463: [2026-03-14T12:54:03.864Z] GET Messages: MongoDB connection failed: querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+4464: [2026-03-14T12:57:39.275Z] POST Booking: Received request for Deep Cleaning from 445e8167-b86c-4f9b-b27c-3a04d4609c41
+4465: [2026-03-14T12:57:39.275Z] POST Booking: Enriched booking data with ID: BK-96A81ECC, status: pending_acceptance
+4466: [2026-03-14T12:57:39.276Z] POST Booking: Attempting to sync to Supabase table: bookings
+4467: [2026-03-14T12:57:39.801Z] POST Booking: Supabase Table 'bookings' Sync Successful
+4468: [2026-03-14T12:57:39.802Z] POST Booking: Firing background MongoDB insert for BK-96A81ECC...
+4469: [2026-03-14T12:57:39.806Z] POST Booking: Returning Success to client with ID: BK-96A81ECC
+4470: [2026-03-14T12:57:45.145Z] GET Messages: MongoDB connection failed: querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+4471: [2026-03-14T12:57:45.146Z] GET Messages: MongoDB connection failed: querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+4472: [2026-03-14T12:57:45.147Z] GET Messages: MongoDB connection failed: querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+4473: [2026-03-14T12:59:12.973Z] POST Booking: Background MongoDB connection failed querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+
+------------------
+Found [2026-03-14T12:57:39.806Z] POST Booking: Returning Success to client with ID: BK-96A81ECC at line 4469
+Context (-5, +5):
+4464: [2026-03-14T12:57:39.275Z] POST Booking: Received request for Deep Cleaning from 445e8167-b86c-4f9b-b27c-3a04d4609c41
+4465: [2026-03-14T12:57:39.275Z] POST Booking: Enriched booking data with ID: BK-96A81ECC, status: pending_acceptance
+4466: [2026-03-14T12:57:39.276Z] POST Booking: Attempting to sync to Supabase table: bookings
+4467: [2026-03-14T12:57:39.801Z] POST Booking: Supabase Table 'bookings' Sync Successful
+4468: [2026-03-14T12:57:39.802Z] POST Booking: Firing background MongoDB insert for BK-96A81ECC...
+4469: [2026-03-14T12:57:39.806Z] POST Booking: Returning Success to client with ID: BK-96A81ECC
+4470: [2026-03-14T12:57:45.145Z] GET Messages: MongoDB connection failed: querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+4471: [2026-03-14T12:57:45.146Z] GET Messages: MongoDB connection failed: querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+4472: [2026-03-14T12:57:45.147Z] GET Messages: MongoDB connection failed: querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+4473: [2026-03-14T12:59:12.973Z] POST Booking: Background MongoDB connection failed querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+4474: [2026-03-14T12:59:39.160Z] GET Messages: MongoDB connection failed: querySrv ETIMEOUT _mongodb._tcp.cluster0.nwypmkr.mongodb.net
+
+------------------

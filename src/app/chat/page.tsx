@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, MapPin, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Send, Sparkles, MapPin, Clock, CheckCircle, AlertTriangle, Navigation } from 'lucide-react';
 import { BookingRequest, ChatMessage, UrgencyLevel } from '@/types/booking';
 import clsx from 'clsx';
 
@@ -13,9 +13,12 @@ const QUICK_REPLIES = [
 ];
 
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ChatPage() {
-    const { user } = useAuth();
+    const { user, selectedLocation, getAuthHeaders } = useAuth();
     const [messages, setMessages] = useState<ChatMessage[]>([
         {
             id: 'welcome',
@@ -36,11 +39,28 @@ export default function ChatPage() {
         scrollToBottom();
     }, [messages]);
 
+    useSupabaseRealtime({
+        table: 'bookings',
+        filter: user ? `user_id=eq.${user.id}` : undefined,
+        onData: (payload) => {
+            const updated = payload.new as any;
+            if (updated && updated.status) {
+                setMessages(prev => [...prev, {
+                    id: crypto.randomUUID(),
+                    role: 'assistant',
+                    content: `🔔 Update for booking ${updated.id.substring(0,6)}: Status is now **${updated.status}**`,
+                    timestamp: Date.now()
+                }]);
+            }
+        },
+        enabled: !!user
+    });
+
     const handleSendMessage = async (text: string) => {
         if (!text.trim()) return;
 
         const userMessage: ChatMessage = {
-            id: Date.now().toString(),
+            id: crypto.randomUUID(),
             role: 'user',
             content: text,
             timestamp: Date.now()
@@ -51,16 +71,16 @@ export default function ChatPage() {
         setIsLoading(true);
 
         try {
-            const response = await fetch('/api/chat', {
+            const response = await fetch('/api/v1/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ message: text })
             });
 
             const data = await response.json();
 
             const aiMessage: ChatMessage = {
-                id: (Date.now() + 1).toString(),
+                id: crypto.randomUUID(),
                 role: 'assistant',
                 content: data.reply,
                 isBooking: !!data.bookingData,
@@ -72,7 +92,7 @@ export default function ChatPage() {
         } catch (error) {
             console.error('Chat failed:', error);
             setMessages(prev => [...prev, {
-                id: Date.now().toString(),
+                id: crypto.randomUUID(),
                 role: 'assistant',
                 content: "Sorry, I'm having trouble connecting right now. Please try again.",
                 timestamp: Date.now()
@@ -85,39 +105,62 @@ export default function ChatPage() {
     const handleConfirmBooking = async (booking: BookingRequest) => {
         if (!user) {
             setMessages(prev => [...prev, {
-                id: Date.now().toString(),
+                id: crypto.randomUUID(),
                 role: 'assistant',
                 content: "Please login to confirm your booking.",
                 timestamp: Date.now()
             }]);
             return;
         }
+
+        const optimisticId = crypto.randomUUID();
+        const optimisticMessage: ChatMessage = {
+            id: optimisticId,
+            role: 'assistant',
+            content: `⏳ **Confirming your booking for ${booking.serviceType}...**`,
+            timestamp: Date.now()
+        };
+
+        // Add optimistic message
+        setMessages(prev => [...prev, optimisticMessage]);
+
         try {
-            const response = await fetch('/api/bookings', {
+            const response = await fetch('/api/v1/bookings', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...booking, userId: user.id })
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ 
+                    ...booking, 
+                    userId: user.id,
+                    location: selectedLocation 
+                })
             });
 
+            const data = await response.json();
+
             if (response.ok) {
-                const newBooking = await response.json();
-                setMessages(prev => [...prev, {
-                    id: Date.now().toString(),
-                    role: 'assistant',
-                    content: `✔ Booking Confirmed! \n\nService: ${newBooking.serviceType}\nID: ${newBooking.id}\nPriority: ${newBooking.urgency}\n\nA professional will be assigned shortly. You can track this in 'My Bookings'.`,
-                    timestamp: Date.now()
-                }]);
+                // Update optimistic message with real data instantly
+                setMessages(prev => prev.map(msg => 
+                    msg.id === optimisticId 
+                        ? {
+                            ...msg,
+                            content: `✔ **Booking Confirmed!** \n\nService: ${data.serviceType}\nID: ${data.id}\nPriority: ${data.urgency}\n\nA professional will be assigned shortly. You can track this in 'My Bookings'.`
+                        }
+                        : msg
+                ));
             } else {
-                throw new Error('Booking failed');
+                throw new Error(data.error || 'Booking failed');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Booking confirmation failed:', error);
-            setMessages(prev => [...prev, {
-                id: Date.now().toString(),
-                role: 'assistant',
-                content: "Sorry, I couldn't confirm your booking right now. Please try again.",
-                timestamp: Date.now()
-            }]);
+            // Replace optimistic message with error
+            setMessages(prev => prev.map(msg => 
+                msg.id === optimisticId 
+                    ? {
+                        ...msg,
+                        content: `❌ **Booking Failed**\n\n${error.message || "Please try again later."}`
+                    }
+                    : msg
+            ));
         }
     };
 
@@ -156,67 +199,74 @@ export default function ChatPage() {
                     </div>
                 )}
 
-                {messages.map((msg) => (
-                    <div
-                        key={msg.id}
-                        className={clsx(
-                            "flex w-full mb-4",
-                            msg.role === 'user' ? "justify-end" : "justify-start"
-                        )}
-                    >
-                        <div className={clsx(
-                            "max-w-[80%] rounded-2xl p-4 shadow-lg",
-                            msg.role === 'user'
-                                ? "bg-[var(--color-seva-accent)] text-white rounded-br-none"
-                                : "bg-white/10 text-white/80 rounded-bl-none border border-white/5"
-                        )}>
-                            <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                <div className="space-y-4">
+                    <AnimatePresence initial={false}>
+                        {messages.map((msg) => (
+                            <motion.div
+                                key={msg.id}
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className={clsx(
+                                    "flex w-full mb-4",
+                                    msg.role === 'user' ? "justify-end" : "justify-start"
+                                )}
+                            >
+                                <div className={clsx(
+                                    "max-w-[80%] rounded-2xl p-4 shadow-lg transition-all",
+                                    msg.role === 'user'
+                                        ? "bg-[var(--color-seva-accent)] text-white rounded-br-none shadow-blue-500/20"
+                                        : "bg-white/10 text-white/80 rounded-bl-none border border-white/5 backdrop-blur-md"
+                                )}>
+                                    <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
 
-                            {msg.isBooking && msg.bookingData && (
-                                <div className="mt-4 bg-black/20 rounded-xl p-4 border border-white/10 animate-[slideUp_0.4s_ease-out]">
-                                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">
-                                        <span className="text-xs font-bold uppercase tracking-wider text-white/40">Booking Preview</span>
-                                        {msg.bookingData.urgency === 'Urgent' && (
-                                            <span className="flex items-center gap-1 text-xs font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-full">
-                                                <AlertTriangle size={12} /> Urgent
-                                            </span>
-                                        )}
-                                    </div>
+                                    {msg.isBooking && msg.bookingData && (
+                                        <div className="mt-4 bg-black/20 rounded-xl p-4 border border-white/10 animate-[slideUp_0.4s_ease-out]">
+                                            <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">
+                                                <span className="text-xs font-bold uppercase tracking-wider text-white/40">Booking Preview</span>
+                                                {msg.bookingData.urgency === 'Urgent' && (
+                                                    <span className="flex items-center gap-1 text-xs font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-full">
+                                                        <AlertTriangle size={12} /> Urgent
+                                                    </span>
+                                                )}
+                                            </div>
 
-                                    <div className="space-y-3 mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-[var(--color-seva-glow)]/20 flex items-center justify-center text-[var(--color-seva-glow)]">
-                                                <Sparkles size={16} />
+                                            <div className="space-y-3 mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-[var(--color-seva-glow)]/20 flex items-center justify-center text-[var(--color-seva-glow)]">
+                                                        <Sparkles size={16} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-white/40">Service</p>
+                                                        <p className="font-semibold">{msg.bookingData.serviceType}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
+                                                        <MapPin size={16} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-white/40">Location</p>
+                                                        <p className="font-semibold">{selectedLocation || msg.bookingData.location}</p>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="text-xs text-white/40">Service</p>
-                                                <p className="font-semibold">{msg.bookingData.serviceType}</p>
-                                            </div>
+
+                                            <button
+                                                onClick={() => msg.bookingData && handleConfirmBooking(msg.bookingData)}
+                                                className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold transition-all transform active:scale-95"
+                                            >
+                                                <CheckCircle size={18} />
+                                                Confirm Booking
+                                            </button>
                                         </div>
-
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
-                                                <MapPin size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-white/40">Location</p>
-                                                <p className="font-semibold">{msg.bookingData.location}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        onClick={() => msg.bookingData && handleConfirmBooking(msg.bookingData)}
-                                        className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold transition-all"
-                                    >
-                                        <CheckCircle size={18} />
-                                        Confirm Booking
-                                    </button>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-                    </div>
-                ))}
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                </div>
                 {isLoading && (
                     <div className="flex justify-start w-full">
                         <div className="bg-white/10 p-4 rounded-2xl rounded-bl-none flex gap-2 items-center">

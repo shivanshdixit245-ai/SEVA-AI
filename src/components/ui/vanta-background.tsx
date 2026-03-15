@@ -8,9 +8,14 @@ import * as THREE from "three";
 export default function VantaBackground() {
     const vantaRef = useRef<HTMLDivElement>(null);
     const [vantaEffect, setVantaEffect] = useState<any>(null);
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        if (!vantaEffect && vantaRef.current) {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (mounted && !vantaEffect && vantaRef.current) {
             try {
                 setVantaEffect(
                     CLOUDS({
@@ -36,7 +41,9 @@ export default function VantaBackground() {
         return () => {
             if (vantaEffect) vantaEffect.destroy();
         };
-    }, [vantaEffect]);
+    }, [vantaEffect, mounted]);
+
+    if (!mounted) return null;
 
     return (
         <div ref={vantaRef} className="fixed inset-0 w-full h-full -z-50 pointer-events-none" />

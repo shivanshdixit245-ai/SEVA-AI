@@ -1,31 +1,42 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, MessageSquare, Wrench, Calendar, LayoutDashboard, Users, HelpCircle, LogOut, LogIn, Shield, User } from 'lucide-react';
+import { Home, MessageSquare, Wrench, Calendar, LayoutDashboard, Users, HelpCircle, LogOut, LogIn, Shield, User, Briefcase, PieChart, TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
-const navItems = [
+const clientNavItems = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Services', href: '/services', icon: Wrench },
     { name: 'Chat Assistant', href: '/chat', icon: MessageSquare },
     { name: 'My Bookings', href: '/bookings', icon: Calendar },
     { name: 'Helpers', href: '/helpers', icon: Users },
-    { name: 'Admin Dashboard', href: '/admin', icon: LayoutDashboard, adminOnly: true },
+    { name: 'System Dashboard', href: '/admin', icon: LayoutDashboard, adminOnly: true },
+];
+
+const workerNavItems = [
+    { name: 'Home', href: '/', icon: Home },
+    { name: 'Jobs', href: '/worker/jobs', icon: Briefcase },
+    { name: 'Chats', href: '/worker/chats', icon: MessageSquare },
+    { name: 'Dashboard', href: '/worker/dashboard', icon: PieChart },
+    { name: 'Revenue', href: '/worker/revenue', icon: TrendingUp },
 ];
 
 export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
     const pathname = usePathname();
     const { user, isAuthenticated, logout } = useAuth();
+    const [mounted, setMounted] = useState(false);
 
-    const roleBadge = user?.role === 'admin'
-        ? { label: 'Admin', color: 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-orange-500/20' }
-        : user?.role === 'worker'
-            ? { label: 'Worker', color: 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-teal-500/20' }
-            : user?.role === 'client'
-                ? { label: 'Client', color: 'bg-gradient-to-r from-blue-500 to-cyan-500 shadow-cyan-500/20' }
-                : null;
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // During SSR and initial client pass, we must match the server's output
+    const isWorker = mounted && user?.role === 'worker';
+    const showProfile = mounted && isAuthenticated && user;
+    const currentNavItems = isWorker ? workerNavItems : clientNavItems;
 
     return (
         <>
@@ -40,7 +51,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose
 
             <aside className={clsx(
                 "fixed top-4 left-4 bottom-4 z-50 w-64 glass-panel rounded-2xl transition-transform duration-300 lg:translate-x-0 flex flex-col overflow-hidden",
-                isOpen ? "translate-x-0" : "-translate-x-[120%]"
+                isOpen ? "translate-x-0" : "-translate-x-full"
             )}>
                 <div className="relative h-full flex flex-col">
                     {/* Logo - Light Mode */}
@@ -57,8 +68,8 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose
 
                     {/* Navigation - Light Mode */}
                     <nav className="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar py-4">
-                        {navItems
-                            .filter(item => !item.adminOnly || user?.role === 'admin')
+                        {currentNavItems
+                            .filter(item => !(item as any).adminOnly || user?.role === 'admin')
                             .map((item) => {
                                 const isActive = pathname === item.href;
                                 const Icon = item.icon;
@@ -89,12 +100,11 @@ export default function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose
 
                     {/* Circular Profile with Popover */}
                     <div className="p-4 mt-auto flex justify-center relative">
-                        {isAuthenticated && user ? (
+                        {showProfile ? (
                             <div className="relative group">
                                 {/* Profile Circle */}
                                 <button
                                     onClick={() => {
-                                        // Toggle logic could go here, or handled by hover/simple click
                                         const event = new CustomEvent('toggle-profile-menu');
                                         window.dispatchEvent(event);
                                     }}

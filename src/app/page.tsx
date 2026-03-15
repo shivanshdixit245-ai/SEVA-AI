@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Sparkles, Zap, Shield, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowRight, Sparkles, Zap, Shield, Clock, Briefcase, LayoutDashboard } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const services = [
   { name: 'Deep Cleaning', icon: '🧹', color: 'bg-blue-500/20 text-blue-400' },
@@ -19,27 +21,40 @@ const stats = [
 ];
 
 export default function Home() {
+  const { user, isAuthenticated } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isWorker = mounted && user?.role === 'worker';
+
   return (
     <div className="space-y-16 animate-[fadeIn_0.5s_ease-out]">
       {/* Hero Section */}
       <section className="relative text-center space-y-6 pt-10 pb-6">
 
         <h1 className="text-5xl md:text-7xl font-bold font-[family-name:var(--font-display)] tracking-tight leading-tight">
-          Home Services <br />
-          <span className="text-gradient">Just a Chat Away</span>
+          {isWorker ? 'Empowering Your' : 'Home Services'} <br />
+          <span className="text-gradient">{isWorker ? 'Professional Journey' : 'Just a Chat Away'}</span>
         </h1>
 
         <p className="text-lg text-white/80 max-w-2xl mx-auto">
-          No more navigating complex menus. Just tell our AI what you need in English, Hindi, or Hinglish.
+          {isWorker
+            ? 'Join India\'s most trusted platform for home professionals. Manage jobs, track earnings, and grow your business.'
+            : 'No more navigating complex menus. Just tell our AI what you need in English, Hindi, or Hinglish.'}
         </p>
 
         <div className="flex justify-center pt-6">
           <Link
-            href="/chat"
+            href={isWorker ? (user?.hasProfile ? "/worker/dashboard" : "/worker/profile") : "/chat"}
             className="flex items-center gap-3 bg-gradient-to-r from-[var(--color-seva-accent)] to-[var(--color-seva-glow)] text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all transform hover:scale-105"
           >
-            Start Booking Now
-            <ArrowRight size={20} />
+            {isWorker 
+              ? (user?.hasProfile ? 'View My Dashboard' : 'Build Professional Profile') 
+              : 'Start Booking Now'}
+            {isWorker ? (user?.hasProfile ? <LayoutDashboard size={20} /> : <Briefcase size={20} />) : <ArrowRight size={20} />}
           </Link>
         </div>
 

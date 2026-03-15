@@ -1,0 +1,65 @@
+[2026-03-14T15:59:12.130Z] Start verification for BK-A17A5ED0 with OTP 3869 by worker undefined
+[2026-03-14T15:59:12.695Z] Found booking BK-A17A5ED0. Raw OTP from DB: 3869 (type: string). Entered: 3869 (type: string)
+[2026-03-14T15:59:12.696Z] SUCCESS: OTP Match. Completing booking...
+[2026-03-14T15:59:12.897Z] FAIL: Supabase update failed: Could not find the 'arrival_otp_verified' column of 'bookings' in the schema cache
+[2026-03-14T15:59:12.899Z] CRITICAL ERROR: Could not find the 'arrival_otp_verified' column of 'bookings' in the schema cache
+[2026-03-14T16:00:01.262Z] Start verification for BK-A17A5ED0. URL: https://hlalqeuhpwktrgqixdfh.supabase.co, KeyPrefix: eyJhbGciOi...
+[2026-03-14T16:00:01.861Z] Connectivity Test OK. Total bookings: 18
+[2026-03-14T16:00:02.153Z] Found booking BK-A17A5ED0. Raw OTP from DB: 3869 (type: string). Entered: 3869 (type: string)
+[2026-03-14T16:00:02.155Z] SUCCESS: OTP Match. Completing booking...
+[2026-03-14T16:00:02.563Z] FAIL: Supabase update failed: Could not find the 'arrival_otp_verified' column of 'bookings' in the schema cache
+[2026-03-14T16:00:02.564Z] CRITICAL ERROR: Could not find the 'arrival_otp_verified' column of 'bookings' in the schema cache
+[2026-03-14T16:01:06.257Z] Start verification for BK-A17A5ED0. URL: https://hlalqeuhpwktrgqixdfh.supabase.co, KeyPrefix: eyJhbGciOi...
+[2026-03-14T16:01:06.259Z] Testing bookings count...
+[2026-03-14T16:01:07.076Z] Connectivity Test OK. Total bookings: 18
+[2026-03-14T16:01:07.488Z] Found booking BK-A17A5ED0. Raw OTP from DB: 3869 (type: string). Entered: 3869 (type: string)
+[2026-03-14T16:01:07.489Z] SUCCESS: OTP Match. Completing booking...
+[2026-03-14T16:01:07.899Z] FAIL: Supabase update failed: Could not find the 'arrival_otp_verified' column of 'bookings' in the schema cache
+[2026-03-14T16:01:07.900Z] CRITICAL ERROR: Could not find the 'arrival_otp_verified' column of 'bookings' in the schema cache
+[2026-03-14T16:02:02.250Z] Start verification for BK-A17A5ED0. URL: https://hlalqeuhpwktrgqixdfh.supabase.co, KeyPrefix: eyJhbGciOi...
+[2026-03-14T16:02:02.251Z] Testing bookings count...
+[2026-03-14T16:02:02.641Z] Connectivity Test OK. Total bookings: 18
+[2026-03-14T16:02:03.092Z] Found booking BK-A17A5ED0. Raw OTP from DB: 3869 (type: string). Entered: 3869 (type: string)
+[2026-03-14T16:02:03.094Z] SUCCESS: OTP Match. Completing booking...
+[2026-03-14T16:02:03.500Z] FAIL: Supabase update failed: Could not find the 'arrival_otp_verified' column of 'bookings' in the schema cache
+[2026-03-14T16:02:03.501Z] CRITICAL ERROR: Could not find the 'arrival_otp_verified' column of 'bookings' in the schema cache
+[2026-03-14T16:02:32.862Z] Start verification for BK-A17A5ED0. URL: https://hlalqeuhpwktrgqixdfh.supabase.co, KeyPrefix: eyJhbGciOi...
+[2026-03-14T16:02:32.863Z] Testing bookings count...
+[2026-03-14T16:02:33.317Z] Connectivity Test OK. Total bookings: 18
+[2026-03-14T16:02:33.623Z] Found booking BK-A17A5ED0. Raw OTP from DB: 3869 (type: string). Entered: 3869 (type: string)
+[2026-03-14T16:02:33.624Z] SUCCESS: OTP Match. Completing booking...
+[2026-03-14T16:02:34.016Z] FAIL: Supabase update failed: Could not find the 'arrival_otp_verified' column of 'bookings' in the schema cache
+[2026-03-14T16:02:34.018Z] CRITICAL ERROR: Could not find the 'arrival_otp_verified' column of 'bookings' in the schema cache
+[2026-03-14T16:07:12.564Z] Start verification for BK-17607455 by worker c4cb74cb-9420-46d1-a51e-6c2c6662f22b
+[2026-03-14T16:07:13.424Z] Found booking BK-17607455. Raw OTP from DB: 1699 (type: string). Entered: 1699 (type: string)
+[2026-03-14T16:07:13.425Z] SUCCESS: OTP Match. Completing booking...
+[2026-03-14T16:07:13.675Z] SUCCESS: Supabase updated. Job marked Completed.
+[2026-03-14T16:33:42.406Z] Start verification for BK-7165D47E by worker aa1c4e1b-3554-4c03-8169-16a2f8c6660f
+[2026-03-14T16:33:42.659Z] Found booking BK-7165D47E. Raw OTP from DB: 7033 (type: string). Entered: 7033 (type: string)
+[2026-03-14T16:33:42.660Z] SUCCESS: OTP Match. Completing booking...
+[2026-03-14T16:33:42.963Z] SUCCESS: Supabase updated. Job marked Completed.
+[2026-03-14T16:34:28.134Z] Start verification for BK-0D3C137D by worker aa1c4e1b-3554-4c03-8169-16a2f8c6660f
+[2026-03-14T16:34:28.637Z] Found booking BK-0D3C137D. Raw OTP from DB: 6298 (type: string). Entered: 7533 (type: string)
+[2026-03-14T16:34:28.639Z] FAIL: OTP Mismatch. Expected 6298, got 7533
+[2026-03-14T16:34:43.491Z] Start verification for BK-0D3C137D by worker aa1c4e1b-3554-4c03-8169-16a2f8c6660f
+[2026-03-14T16:34:43.998Z] Found booking BK-0D3C137D. Raw OTP from DB: 6298 (type: string). Entered: 7791 (type: string)
+[2026-03-14T16:34:44.000Z] FAIL: OTP Mismatch. Expected 6298, got 7791
+[2026-03-14T16:34:54.183Z] Start verification for BK-0D3C137D by worker aa1c4e1b-3554-4c03-8169-16a2f8c6660f
+[2026-03-14T16:34:54.544Z] Found booking BK-0D3C137D. Raw OTP from DB: 6298 (type: string). Entered: 5059 (type: string)
+[2026-03-14T16:34:54.546Z] FAIL: OTP Mismatch. Expected 6298, got 5059
+[2026-03-14T16:35:14.377Z] Start verification for BK-0D3C137D by worker aa1c4e1b-3554-4c03-8169-16a2f8c6660f
+[2026-03-14T16:35:14.687Z] Found booking BK-0D3C137D. Raw OTP from DB: 6298 (type: string). Entered: 6298 (type: string)
+[2026-03-14T16:35:14.688Z] SUCCESS: OTP Match. Completing booking...
+[2026-03-14T16:35:14.842Z] SUCCESS: Supabase updated. Job marked Completed.
+[2026-03-14T17:17:53.932Z] Start verification for BK-45D302BA by worker aa1c4e1b-3554-4c03-8169-16a2f8c6660f
+[2026-03-14T17:17:54.388Z] Found booking BK-45D302BA. Raw OTP from DB: 1527 (type: string). Entered: 1527 (type: string)
+[2026-03-14T17:17:54.390Z] SUCCESS: OTP Match. Completing booking...
+[2026-03-14T17:17:54.568Z] SUCCESS: Supabase updated. Job marked Completed.
+[2026-03-14T18:44:23.606Z] Start verification for BK-FA7BB961 by worker fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T18:44:24.122Z] Found booking BK-FA7BB961. Raw OTP from DB: 1308 (type: string). Entered: 1308 (type: string)
+[2026-03-14T18:44:24.123Z] SUCCESS: OTP Match. Completing booking...
+[2026-03-14T18:44:24.616Z] SUCCESS: Supabase updated. Job marked Completed.
+[2026-03-14T19:11:56.848Z] Start verification for BK-411C94DE by worker fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T19:11:57.490Z] Found booking BK-411C94DE. Raw OTP from DB: 7258 (type: string). Entered: 7258 (type: string)
+[2026-03-14T19:11:57.492Z] SUCCESS: OTP Match. Completing booking...
+[2026-03-14T19:11:57.686Z] SUCCESS: Supabase updated. Job marked Completed.

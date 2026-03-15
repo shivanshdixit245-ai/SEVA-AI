@@ -1,5 +1,4 @@
 
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -7,8 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from .env.local
-dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+// Environment variables should be loaded via node --env-file=.env.local if needed
 
 // Must import AFTER loading env vars
 import { createClient } from '@supabase/supabase-js';

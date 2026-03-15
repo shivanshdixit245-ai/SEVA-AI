@@ -1,12 +1,17 @@
-'use client';
-
+import { useState, useEffect } from 'react';
 import { Bell, Menu, Settings } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import NotificationBell from './NotificationBell';
 import AddressSelector from './ui/address-selector';
 
 export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, isAuthenticated } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const initials = user
     ? user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -29,7 +34,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
         <div className="flex items-center gap-3 bg">
 
           <div className="flex items-center gap-3">
-            {isAuthenticated ? (
+            {mounted && isAuthenticated ? (
               <Link href="/profile" className="flex items-center gap-2 text-white/80 hover:text-white transition-colors">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-white hidden md:block">{displayName}</span>
@@ -45,10 +50,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
               <Settings size={18} />
             </button>
 
-            <button className="relative p-2 text-white/60 hover:text-white transition-colors hover:bg-white/10 rounded-lg">
-              <Bell size={18} />
-              <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
-            </button>
+            <NotificationBell />
           </div>
         </div>
       </div>

@@ -10,7 +10,7 @@ export type ServiceType =
 
 export type UrgencyLevel = 'Normal' | 'Urgent' | 'Emergency';
 
-export type BookingStatus = 'Pending' | 'Confirmed' | 'In Progress' | 'Completed' | 'Cancelled';
+export type BookingStatus = 'Pending' | 'pending_acceptance' | 'Confirmed' | 'In Progress' | 'Completed' | 'Cancelled';
 
 export interface BookingRequest {
     serviceType: ServiceType;
@@ -19,6 +19,8 @@ export interface BookingRequest {
     urgency: UrgencyLevel;
     confidence?: number;
     date?: string;
+    latitude?: number;
+    longitude?: number;
 }
 
 export interface Booking {
@@ -32,8 +34,14 @@ export interface Booking {
     createdAt: string;
     scheduledDate: string;
     helperId?: string;
+    workerId?: string; // ID of the worker who accepted
     price?: number;
     otp?: string;
+    latitude?: number;
+    longitude?: number;
+    liveLat?: number;
+    liveLng?: number;
+    acceptedAt?: string;
 }
 
 export interface ChatMessage {
@@ -67,6 +75,8 @@ export interface Helper {
     description: string;
     reviews: Review[];
     experience: number; // Years of experience
+    phone: string;
+    supabaseId?: string; // Supabase Auth UUID
 }
 
 export interface ServiceCategory {
@@ -75,4 +85,13 @@ export interface ServiceCategory {
     icon: string;
     description: string;
     basePrice: number;
+}
+export interface DirectMessage {
+    id: string;
+    senderId: string;
+    receiverId: string;
+    content: string;
+    timestamp: number;
+    bookingId?: string;
+    isRead?: boolean;
 }

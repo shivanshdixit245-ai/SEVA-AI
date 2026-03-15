@@ -1,0 +1,23 @@
+{
+  "id": "BK-96A81ECC",
+  "user_id": "445e8167-b86c-4f9b-b27c-3a04d4609c41",
+  "service_type": "Deep Cleaning",
+  "status": "Confirmed",
+  "urgency": "Normal",
+  "description": "Book a deep cleaning for my kitchen",
+  "location": "Delhi, India",
+  "created_at": "2026-03-14T12:57:39.275+00:00",
+  "scheduled_date": "2026-03-15T12:57:39.275+00:00",
+  "helper_id": null,
+  "price": 1999,
+  "otp": "3595",
+  "worker_id": "c4cb74cb-9420-46d1-a51e-6c2c6662f22b",
+  "live_lat": 31.2497219630613,
+  "live_lng": 75.7002425486182,
+  "accepted_at": "2026-03-14T12:57:47.403+00:00",
+  "worker_name": "test user helper",
+  "worker_phone": "",
+  "worker_profession": "Professional Worker",
+  "worker_experience": 0,
+  "worker_verified": false
+}

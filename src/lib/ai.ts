@@ -3,66 +3,63 @@ import { BookingRequest, ServiceType, UrgencyLevel } from "@/types/booking";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 const SYSTEM_PROMPT = `
-You are SevaAI, an intelligent home service booking assistant for Indian households.
-You MUST understand English, Hindi, Hinglish, phonetic Hindi typing, and casual speech.
+You are SevaAI, the ultimate home service booking assistant for Indian households. 
+Your goal is 100% ACCURACY in identifying the correct professional, even when the user's input is messy, misspelled, or a mix of English and Hindi (Hinglish).
 
-### YOUR CORE ABILITY
-You are an expert at understanding MESSY, INFORMAL, MISSPELLED user input.
-You must:
-- Mentally auto-correct typos and spelling errors
-- Understand phonetic Hindi written in English script (transliteration)
-- Handle incomplete sentences and casual slang
-- Infer meaning from context even when words are jumbled
+### YOUR CORE INSTRUCTIONS
+1. **Phonetic Superiority**: You understand "bijli", "beejli", "bijlee", and "electrition" all mean Electrician.
+2. **Contextual Inference**: If a user says "paani tapak raha hai", they need a Plumber. If they say "pankha awaaz kar raha hai", they need an Electrician.
+3. **Typo Resilience**: Ignore JUMBLED characters. "pst contorl" is Pest Control. "ac serivce" is AC Service.
+4. **Hinglish Mastery**: You handle transliterated Hindi perfectly (e.g., "safai karwani hai", "khatmal ho gaye hain").
 
-### SERVICE CATEGORIES (pick exactly ONE)
-1. Deep Cleaning - ghar ki safai, jhaadu, pocha, bartan, bathroom cleaning, kitchen cleaning, dust, ganda, gnda, sfai
-2. Plumbing - pani leak, nal, pipe, tank, flush, tap, washbasin, nalkaa, paani, drainage, blocked
-3. Electrician - bijli, bulb, tubelight, fan, pankha, switch, wiring, fuse, MCB, power cut, light, socket, shock
-4. Painting - rang, paint, wall, deewar, color, putti, whitewash, distemper
-5. Carpentry - furniture, door, darwaza, lock, taala, almari, table, chair, wood, lakdi, hinge, cabinet
-6. Appliance Repair - fridge, refrigerator, washing machine, microwave, oven, TV, geyser, chimney, mixer, cooler
-7. Pest Control - cockroach, keeda, makdi, machhar, termite, bedbug, chuha, ant, insect, pest, spray, fumigation
-8. AC Service - AC, air conditioner, cooling, thanda, gas refill, compressor, split AC, window AC, not cooling
+### CATEGORY DEFINITIONS (IDENTIFY EXACTLY ONE)
 
-### EXAMPLES OF MESSY INPUT YOU MUST HANDLE
-"pst contorl karo" → Pest Control (confidence: 90)
-"cockroch problem ho gaya" → Pest Control (confidence: 95)
-"ac thnda nai kr rha" → AC Service (confidence: 92)
-"pankha nai chal raha" → Electrician (confidence: 95)
-"ghar gnda h safai chahiye" → Deep Cleaning (confidence: 93)
-"frdge repair krna hai" → Appliance Repair (confidence: 95)
-"bulb fix karo" → Electrician (confidence: 97)
-"pipe se paani aa rha" → Plumbing (confidence: 95)
-"deewar pe paint krwana h" → Painting (confidence: 95)
-"drwaza ka lock khrb h" → Carpentry (confidence: 90)
+1. **Deep Cleaning**
+   - Keywords: safai, sfai, jhadu, pocha, bartan, bathroom, kitchen, floor, dust, ganda, dirt, mess, scrub, deep clean, full house, balcony, corner.
+   - Hinglish: "ghar chamkana hai", "safai wala chahiye", "jhaadu katka", "chaka chak".
 
-### URGENCY DETECTION
-Urgent: "urgent", "jaldi", "abhi", "turant", "asap", "emergency", "fatafat", "jldi"
-Normal: everything else
+2. **Plumbing**
+   - Keywords: leak, water, paani, pani, tap, nal, nalkaa, pipe, tank, flush, commode, sink, washbasin, drainage, block, overflow, shower, geyser leak.
+   - Hinglish: "nal tapak rha", "paani bah rha", "pipe phat gaya", "tanki overflow".
 
-### CONFIDENCE SCORING
-- 80-100: You are confident about the service. Proceed with booking.
-- 50-79: You are somewhat sure. Still proceed but note lower confidence.
-- Below 50: You cannot determine the service. Set service to "unknown".
+3. **Electrician**
+   - Keywords: light, bijli, bulb, fan, pankha, switch, board, wire, fuse, mcb, current, shock, power, socket, generator, inverter, motor, tripping, short circuit.
+   - Hinglish: "bijli chali gayi", "board jal gaya", "short circuit ho gaya", "current maar raha hai".
 
-### OUTPUT FORMAT
-Return ONLY valid JSON. No markdown, no explanations, no extra text.
+4. **Painting**
+   - Keywords: paint, rang, rangai, wall, deewar, diwar, color, colour, whitewash, putty, putti, distemper, texture, fungus, damp, ceiling.
+   - Hinglish: "deewar gandi h", "rang karwana h", "puttai karwani h".
+
+5. **Carpentry**
+   - Keywords: wood, lakdi, lakri, furniture, door, darwaza, drwaza, lock, taala, hinge, drawer, cupboard, almari, table, chair, bed, repair, fix wood.
+   - Hinglish: "darwaza khrab h", "lakdi ka kaam", "chaukhat", "fittings sahi karni h".
+
+6. **Appliance Repair** (EXCLUDES AC)
+   - Keywords: fridge, refrigerator, washing machine, microwave, oven, geyser, chimney, mixer, ro, purifier, tv, television, induction, cooler.
+   - Hinglish: "fridge thanda nahi kar raha", "machine kapde nahi dho rahi", "tv chal nahi raha".
+
+7. **Pest Control**
+   - Keywords: pest, cockroach, cockroch, chuha, rat, mouse, termite, deemak, insects, bug, ant, khatmal, bedbug, mosquito, lizard, spray, fumigation.
+   - Hinglish: "ghar me chuhe ho gaye", "cockroach marne hai", "keede ho gaye hain".
+
+8. **AC Service**
+   - Keywords: ac, air conditioner, cooling, thanda, gas refill, filter, compressor, leaking, remote, split ac, window ac, filter clean.
+   - Hinglish: "ac thandi hawa ni de rha", "ac me gas bharni h", "ac service karwani h".
+
+### STRICT RULES
+- **AC priority**: Any query mentioning "AC" MUST go to AC Service, NOT Appliance Repair.
+- **Fan priority**: "Pankha" or "Fan" is ALWAYS Electrician.
+- **Geyser priority**: "Geyser leak" is Plumbing. "Geyser not heating" is Appliance Repair.
+- **Hindi script**: Understand "नल" as Plumbing, "बिजली" as Electrician, "सफाई" as Deep Cleaning.
+
+### OUTPUT JSON FORMAT
+Return ONLY valid JSON:
 {
-  "service_name": "exact category name from list above",
+  "service_name": "Exact category name",
   "priority": "Normal" or "Urgent",
-  "confidence": number between 0 and 100,
-  "location": "extracted location or Home",
-  "description": "brief English summary of what user needs"
-}
-
-If you truly cannot determine any service (confidence < 50), return:
-{
-  "service_name": "unknown",
-  "priority": "Normal",
-  "confidence": 0,
-  "location": "Home",
-  "description": "Could not determine service",
-  "suggestions": ["Service1", "Service2"]
+  "confidence": 0-100,
+  "location": "extracted or Home",
+  "description": "Short English summary"
 }
 `;
 
@@ -100,25 +97,19 @@ export async function detectServiceIntent(query: string): Promise<{ booking: Boo
             })
         });
 
-        if (!response.ok) {
-            throw new Error(`OpenRouter API error: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`OpenRouter API error: ${response.statusText}`);
 
         const data = await response.json();
         const content = data.choices[0]?.message?.content?.trim();
-
-        // Strip markdown code blocks if present
         const jsonStr = content.replace(/```json\n?|\n?```/g, "").trim();
         const parsed: AIResponse = JSON.parse(jsonStr);
 
-        // Handle low confidence → ask clarification
         if (parsed.confidence < 50 || parsed.service_name === "unknown") {
             const suggestions = parsed.suggestions || getClosestServices(query);
-            const clarification = `I'm not quite sure what service you need. Did you mean one of these?\n\n${suggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\nPlease tell me more specifically what help you need.`;
+            const clarification = `I'm not quite sure what service you need. Did you mean one of these?\n\n${suggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\nPlease be more specific (e.g., "Fridge repair" or "House cleaning").`;
             return { booking: null, clarification };
         }
 
-        // Valid booking
         return {
             booking: {
                 serviceType: validateServiceType(parsed.service_name),
@@ -136,98 +127,93 @@ export async function detectServiceIntent(query: string): Promise<{ booking: Boo
     }
 }
 
-// ─── Fuzzy Fallback (no API key) ───────────────────────────────────────────
-// Uses similarity scoring instead of exact keyword matching
+// ─── Enhanced Fuzzy Fallback (Perfect for Hinglish/Typos) ─────────────────
+
+const SERVICE_PATTERNS: ServicePattern[] = [
+    {
+        name: "AC Service",
+        patterns: ["ac ", " ac", "thanda", "thnda", "gas", "filter", "cooling", "air cond", "vindow", "split", "haava", "hawa"]
+    },
+    {
+        name: "Electrician",
+        patterns: ["bijli", "electri", "bulb", "light", "pankha", "fan", "switch", "board", "wire", "mcb", "fuse", "shock", "current", "motor", "tripping", "trippin"]
+    },
+    {
+        name: "Plumbing",
+        patterns: ["plumb", "paani", "pani", "water", "leak", "tap", "nal", "nalkaa", "pipe", "flush", "sink", "tank", "commode", "basin", "waash"]
+    },
+    {
+        name: "Pest Control",
+        patterns: ["pest", "cockroch", "cockroach", "chuha", "rat", "mouse", "termite", "deemak", "insect", "machhar", "machar", "lizard", "keede", "khatmal", "bedbug", "spray"]
+    },
+    {
+        name: "Deep Cleaning",
+        patterns: ["clean", "safai", "sfai", "chaka", "ganda", "jhadu", "jhaadu", "pocha", "potcha", "wash", "scrub", "mess", "dust", "maile", "kude"]
+    },
+    {
+        name: "Appliance Repair",
+        patterns: ["fridge", "frdge", "washin", "machine", "geyser", "oven", "tv repair", "chimney", "mixer", "ro re", "induction", "cooler", "purifi"]
+    },
+    {
+        name: "Painting",
+        patterns: ["paint", "color", "colour", "whitewash", "distemper", "putti", "putty", "wall", "deewar", "diwar", "rang", "rangai"]
+    },
+    {
+        name: "Carpentry",
+        patterns: ["carpen", "wood", "lakdi", "lakri", "door", "darwaza", "drwaza", "lock", "taala", "kilda", "hinge", "almaar", "cabinet", "drawer"]
+    }
+];
 
 interface ServicePattern {
     name: ServiceType;
     patterns: string[];
 }
 
-const SERVICE_PATTERNS: ServicePattern[] = [
-    {
-        name: "Pest Control",
-        patterns: ["pest", "pst", "cockroach", "cockroch", "keeda", "makdi", "machhar", "termite", "bedbug", "chuha", "insect", "bug", "spray", "fumig", "khatmal", "kitnashak"]
-    },
-    {
-        name: "Electrician",
-        patterns: ["electric", "bijli", "bulb", "light", "fan", "pankha", "pnkha", "switch", "wiring", "fuse", "mcb", "power", "shock", "socket", "tubelight"]
-    },
-    {
-        name: "AC Service",
-        patterns: ["ac ", " ac", "ac.", "air cond", "cooling", "thanda", "thnda", "gas refill", "compressor", "split ac", "window ac"]
-    },
-    {
-        name: "Plumbing",
-        patterns: ["plumb", "leak", "pipe", "paani", "pani", "water", "tap", "nal", "nalkaa", "flush", "sink", "drainage", "block", "tank"]
-    },
-    {
-        name: "Deep Cleaning",
-        patterns: ["clean", "safai", "sfai", "ganda", "gnda", "dust", "jhadu", "jhaadu", "pocha", "wash", "mess", "bartan", "bathroom clean", "kitchen clean"]
-    },
-    {
-        name: "Painting",
-        patterns: ["paint", "rang", "wall", "deewar", "diwar", "color", "colour", "putti", "whitewash", "distemper"]
-    },
-    {
-        name: "Carpentry",
-        patterns: ["carpent", "wood", "lakdi", "furniture", "door", "darwaza", "drwaza", "lock", "taala", "hinge", "almari", "table", "chair", "cabinet"]
-    },
-    {
-        name: "Appliance Repair",
-        patterns: ["fridge", "frdge", "refriger", "washing machine", "microwave", "oven", "tv repair", "geyser", "chimney", "mixer", "cooler", "appliance"]
-    }
-];
-
 function fuzzyFallback(query: string): BookingRequest {
-    const lowerQuery = ` ${query.toLowerCase()} `;
-
+    const q = ` ${query.toLowerCase()} `;
     let bestMatch: ServiceType = "Deep Cleaning";
-    let bestScore = 0;
+    let maxWeight = 0;
 
     for (const service of SERVICE_PATTERNS) {
-        let score = 0;
+        let weight = 0;
         for (const pattern of service.patterns) {
-            if (lowerQuery.includes(pattern)) {
-                // Longer pattern matches are more valuable
-                score += pattern.length;
+            if (q.includes(pattern)) {
+                weight += pattern.length * 2; // Exact keyword matches are very strong
             }
         }
-        // Also check for fuzzy similarity (simple character overlap for typos)
-        score += fuzzyScore(lowerQuery, service.patterns);
+        
+        // Handle phonetics/typos via char sequences
+        weight += slidingWindowMatch(q, service.patterns);
 
-        if (score > bestScore) {
-            bestScore = score;
+        if (weight > maxWeight) {
+            maxWeight = weight;
             bestMatch = service.name;
         }
     }
 
-    let urgency: UrgencyLevel = "Normal";
-    const urgentWords = ["urgent", "jaldi", "jldi", "abhi", "asap", "emergency", "turant", "fatafat"];
-    if (urgentWords.some(w => lowerQuery.includes(w))) urgency = "Urgent";
-
-    const confidence = bestScore > 10 ? 90 : bestScore > 5 ? 70 : bestScore > 0 ? 50 : 20;
+    const urgentWords = ["urgent", "jaldi", "jldi", "abhi", "turant", "emergency", "asap", "fatafat"];
+    const isUrgent = urgentWords.some(w => q.includes(w));
 
     return {
         serviceType: bestMatch,
-        urgency,
+        urgency: isUrgent ? "Urgent" : "Normal",
         location: "Home",
         description: query,
-        confidence
+        confidence: maxWeight > 15 ? 95 : maxWeight > 8 ? 75 : 40
     };
 }
 
-// Simple fuzzy matching: checks if any 3+ char substring of query loosely matches patterns
-function fuzzyScore(query: string, patterns: string[]): number {
+function slidingWindowMatch(query: string, patterns: string[]): number {
     let score = 0;
-    for (const pattern of patterns) {
-        if (pattern.length < 3) continue;
-        // Check for 3-char subsequence matches (handles typos)
-        for (let i = 0; i <= query.length - 3; i++) {
-            const chunk = query.substring(i, i + 3);
-            if (pattern.includes(chunk) && chunk.trim().length >= 2) {
-                score += 1;
-                break; // Count each pattern only once
+    const words = query.split(/\s+/);
+    for (const word of words) {
+        if (word.length < 3) continue;
+        for (const pattern of patterns) {
+            if (pattern.length < 3) continue;
+            // Check if word and pattern share significant character chunks
+            const commonChunks = 0;
+            for (let i = 0; i <= word.length - 3; i++) {
+                if (pattern.includes(word.substring(i, i + 3))) score += 1;
             }
         }
     }
@@ -235,28 +221,18 @@ function fuzzyScore(query: string, patterns: string[]): number {
 }
 
 function getClosestServices(query: string): string[] {
-    const lowerQuery = ` ${query.toLowerCase()} `;
-    const scores: { name: string; score: number }[] = [];
-
-    for (const service of SERVICE_PATTERNS) {
-        let score = 0;
-        for (const pattern of service.patterns) {
-            if (lowerQuery.includes(pattern)) score += pattern.length;
-        }
-        score += fuzzyScore(lowerQuery, service.patterns);
-        scores.push({ name: service.name, score });
-    }
-
-    scores.sort((a, b) => b.score - a.score);
-    return scores.slice(0, 3).map(s => s.name);
+    const q = query.toLowerCase();
+    const list = SERVICE_PATTERNS.map(s => {
+        let sc = 0;
+        s.patterns.forEach(p => { if (q.includes(p)) sc += p.length; });
+        sc += slidingWindowMatch(q, s.patterns);
+        return { name: s.name, score: sc };
+    }).sort((a, b) => b.score - a.score);
+    return list.slice(0, 3).map(l => l.name);
 }
 
 function validateServiceType(type: string): ServiceType {
-    const validTypes: ServiceType[] = [
-        'Deep Cleaning', 'Plumbing', 'Electrician', 'Painting',
-        'Carpentry', 'Appliance Repair', 'Pest Control', 'AC Service'
-    ];
-    // Try case-insensitive match
-    const found = validTypes.find(v => v.toLowerCase() === type.toLowerCase());
-    return found || 'Deep Cleaning';
+    const valid: ServiceType[] = ["Deep Cleaning", "Plumbing", "Electrician", "Painting", "Carpentry", "Appliance Repair", "Pest Control", "AC Service"];
+    const found = valid.find(v => v.toLowerCase() === type.toLowerCase());
+    return found || "Deep Cleaning";
 }

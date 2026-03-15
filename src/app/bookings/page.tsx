@@ -1,63 +1,109 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, User, CheckCircle, Circle, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Calendar, Clock, MapPin, User, CheckCircle, Circle, AlertCircle, Navigation, Star } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Booking, BookingStatus, Helper } from '@/types/booking';
 import clsx from 'clsx';
 import Link from 'next/link';
-
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
+import { BookingSkeleton } from '@/components/Skeletons';
+import ReviewModal from '@/components/ReviewModal';
 
-const STATUS_STEPS: BookingStatus[] = ['Pending', 'Confirmed', 'In Progress', 'Completed'];
+const STATUS_STEPS: BookingStatus[] = ['pending_acceptance', 'Confirmed', 'In Progress', 'Completed'];
+const STATUS_LABELS: Record<string, string> = { 'pending_acceptance': 'Finding Helper', 'Confirmed': 'Confirmed', 'In Progress': 'In Progress', 'Completed': 'Completed' };
 
 export default function BookingsPage() {
-    const { user } = useAuth();
+    const { user, getAuthHeaders } = useAuth();
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [helpers, setHelpers] = useState<Record<string, Helper>>({});
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'All' | 'Active' | 'History'>('Active');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
+    const mountedRef = useRef(true);
 
-    useEffect(() => {
-        if (user) {
-            fetchData();
+    const mapBooking = (b: any): Booking => ({
+        ...b,
+        userId: b.user_id,
+        helperId: b.worker_id || b.helper_id,
+        scheduledDate: b.scheduled_date,
+        createdAt: b.created_at,
+        serviceType: b.service_type,
+        workerId: b.worker_id,
+        workerName: b.worker_name,
+        workerPhone: b.worker_phone,
+        workerProfession: b.worker_profession,
+        workerExperience: b.worker_experience,
+        workerVerified: b.worker_verified,
+        liveLat: b.live_lat,
+        liveLng: b.live_lng,
+        acceptedAt: b.accepted_at,
+        id: b.id
+    });
+
+    const fetchData = useCallback(async () => {
+        if (!user) return;
+        try {
+            const res = await fetch(`/api/v1/bookings?userId=${user.id}`, {
+                headers: getAuthHeaders()
+            });
+            const data = await res.json();
+            
+            if (!res.ok) {
+                console.error("Booking API Error Response:", data);
+                throw new Error(data.error || 'Failed to fetch bookings');
+            }
+
+            if (mountedRef.current) {
+                setBookings(data || []);
+            }
+        } catch (error: any) {
+            console.error("Failed to fetch bookings:", {
+                message: error.message,
+                user: user.id,
+                error
+            });
+        } finally {
+            if (mountedRef.current) setLoading(false);
         }
     }, [user]);
 
-    async function fetchData() {
-        if (!user) return;
-        setLoading(true);
-        try {
-            const [bookingsRes, helpersRes] = await Promise.all([
-                fetch(`/api/bookings?userId=${user.id}`),
-                fetch('/api/helpers')
-            ]);
+    useEffect(() => {
+        mountedRef.current = true;
+        if (user) fetchData();
+        else setLoading(false);
+        return () => { mountedRef.current = false; };
+    }, [user, fetchData]);
 
-            if (bookingsRes.ok && helpersRes.ok) {
-                const bookingsData = await bookingsRes.json();
-                const helpersData: Helper[] = await helpersRes.json();
-
-                setBookings(bookingsData);
-
-                // Create a map of helpers for easy lookup
-                const helpersMap: Record<string, Helper> = {};
-                helpersData.forEach(h => {
-                    helpersMap[h.id] = h;
-                });
-                setHelpers(helpersMap);
+    // Supabase Realtime — granular instant updates
+    useSupabaseRealtime({
+        table: 'bookings',
+        filter: user ? `user_id=eq.${user.id}` : undefined,
+        onData: (payload) => {
+            if (!mountedRef.current) return;
+            
+            if (payload.eventType === 'INSERT') {
+                const newItem = mapBooking(payload.new);
+                setBookings(prev => [newItem, ...prev]);
+            } else if (payload.eventType === 'UPDATE') {
+                const updatedItem = mapBooking(payload.new);
+                setBookings(prev => prev.map(b => b.id === updatedItem.id ? { ...b, ...updatedItem } : b));
+            } else if (payload.eventType === 'DELETE') {
+                const deletedId = payload.old.id;
+                setBookings(prev => prev.filter(b => b.id !== deletedId));
             }
-        } catch (error) {
-            console.error("Failed to fetch data", error);
-        } finally {
-            setLoading(false);
-        }
-    }
+        },
+        enabled: !!user
+    });
 
     const getFilteredBookings = () => {
         return bookings.filter(b => {
             if (filter === 'All') return true;
-            if (filter === 'Active') return ['Pending', 'Confirmed', 'In Progress'].includes(b.status);
+            if (filter === 'Active') return ['Pending', 'pending_acceptance', 'Confirmed', 'In Progress'].includes(b.status);
             if (filter === 'History') return ['Completed', 'Cancelled'].includes(b.status);
             return true;
         });
@@ -84,9 +130,9 @@ export default function BookingsPage() {
 
     const deleteBookings = async (ids: string[]) => {
         try {
-            const res = await fetch('/api/bookings', {
+            const res = await fetch('/api/v1/bookings', {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ ids })
             });
             if (res.ok) {
@@ -100,6 +146,7 @@ export default function BookingsPage() {
     const getStatusColor = (status: BookingStatus) => {
         switch (status) {
             case 'Pending': return 'text-yellow-400 border-yellow-400/50 bg-yellow-400/10';
+            case 'pending_acceptance': return 'text-amber-400 border-amber-400/50 bg-amber-400/10';
             case 'Confirmed': return 'text-blue-400 border-blue-400/50 bg-blue-400/10';
             case 'In Progress': return 'text-[var(--color-seva-glow)] border-[var(--color-seva-glow)]/50 bg-[var(--color-seva-glow)]/10';
             case 'Completed': return 'text-green-400 border-green-400/50 bg-green-400/10';
@@ -110,8 +157,11 @@ export default function BookingsPage() {
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-64">
-                <div className="w-8 h-8 border-4 border-[var(--color-seva-accent)] border-t-transparent rounded-full animate-spin"></div>
+            <div className="space-y-8">
+                <div className="flex justify-between items-center">
+                    <div className="h-10 w-48 bg-white/5 animate-pulse rounded-xl" />
+                </div>
+                <BookingSkeleton />
             </div>
         );
     }
@@ -198,8 +248,13 @@ export default function BookingsPage() {
                                                 <div className="flex items-center gap-3">
                                                     <h3 className="text-xl font-bold">{booking.serviceType}</h3>
                                                     <span className={clsx("text-xs px-2 py-0.5 rounded-full border", getStatusColor(booking.status))}>
-                                                        {booking.status}
+                                                        {STATUS_LABELS[booking.status] || booking.status}
                                                     </span>
+                                                    {booking.status === 'pending_acceptance' && (
+                                                        <span className="flex items-center gap-1 text-[10px] text-amber-400 animate-pulse">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Searching...
+                                                        </span>
+                                                    )}
                                                     {booking.urgency === 'Urgent' && (
                                                         <span className="text-xs px-2 py-0.5 rounded-full border border-red-400/50 text-red-400 bg-red-400/10 flex items-center gap-1">
                                                             <AlertCircle size={10} /> Urgent
@@ -230,22 +285,45 @@ export default function BookingsPage() {
                                     {/* Status Tracker */}
                                     {booking.status !== 'Cancelled' && (
                                         <div className="flex items-center justify-between relative mb-8 px-4">
-                                            <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-white/10 -z-10" />
+                                            {/* Connector segments */}
+                                            <div className="absolute left-10 right-10 top-1/2 -translate-y-1/2 h-0.5 flex -z-10">
+                                                {STATUS_STEPS.slice(1).map((_, i) => {
+                                                    const isSegmentCompleted = STATUS_STEPS.indexOf(booking.status) > i;
+                                                    return (
+                                                        <div 
+                                                            key={i} 
+                                                            className={clsx(
+                                                                "flex-1 h-full transition-all duration-700",
+                                                                isSegmentCompleted ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-white/10"
+                                                            )}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+
                                             {STATUS_STEPS.map((step, index) => {
                                                 const isCompleted = STATUS_STEPS.indexOf(booking.status) >= index;
                                                 const isCurrent = booking.status === step;
 
                                                 return (
-                                                    <div key={step} className="flex flex-col items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-sm">
+                                                    <div key={step} className="flex flex-col items-center gap-2 relative">
                                                         <div className={clsx(
-                                                            "w-8 h-8 rounded-lg flex items-center justify-center border transition-all",
-                                                            isCompleted ? "bg-green-500 border-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]" : "bg-transparent border-white/20 text-white/30"
+                                                            "w-8 h-8 rounded-lg flex items-center justify-center border transition-all duration-500 relative z-10",
+                                                            isCompleted ? "bg-green-500 border-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)] scale-110" : "bg-black/40 border-white/20 text-white/30 backdrop-blur-md"
                                                         )}>
                                                             {isCompleted ? <CheckCircle size={16} /> : <Circle size={16} />}
                                                         </div>
-                                                        <span className={clsx("text-xs font-bold tracking-wide", isCurrent ? "text-white" : "text-white/50")}>
-                                                            {step}
+                                                        <span className={clsx("text-[10px] font-bold tracking-widest uppercase transition-colors duration-500 whitespace-nowrap px-1", isCurrent ? "text-white" : "text-white/30")}>
+                                                            {STATUS_LABELS[step] || step}
                                                         </span>
+                                                        {isCurrent && (
+                                                            <motion.div 
+                                                                layoutId={`pulse-${booking.id}`}
+                                                                className="absolute -top-1 -left-1 -right-1 -bottom-5 border border-[var(--color-seva-accent)]/30 rounded-xl"
+                                                                animate={{ opacity: [0.2, 0.5, 0.2] }}
+                                                                transition={{ duration: 2, repeat: Infinity }}
+                                                            />
+                                                        )}
                                                     </div>
                                                 );
                                             })}
@@ -278,31 +356,74 @@ export default function BookingsPage() {
 
                                         <div className="space-y-4">
                                             <h4 className="text-sm font-semibold uppercase tracking-wider text-white/40">Assigned Professional</h4>
-                                            {assignedHelper ? (
+                                            {(booking as any).workerId ? (
                                                 <div className="flex items-center gap-4 bg-white/5 p-4 rounded-xl">
-                                                    <img
-                                                        src={assignedHelper.avatar}
-                                                        alt={assignedHelper.name}
-                                                        className="w-12 h-12 rounded-full border border-white/10 object-cover"
-                                                    />
+                                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg border border-white/10">
+                                                        {((booking as any).workerName || 'H').charAt(0).toUpperCase()}
+                                                    </div>
                                                     <div>
-                                                        <Link href={`/helpers/${assignedHelper.id}`} className="font-bold hover:underline hover:text-[var(--color-seva-accent)]">
-                                                            {assignedHelper.name}
-                                                        </Link>
-                                                        <div className="flex items-center gap-1 text-xs text-white/60">
-                                                            <span className="text-yellow-400">⭐ {assignedHelper.rating}</span>
-                                                            <span>•</span>
-                                                            <span>{assignedHelper.completedJobs} Jobs</span>
+                                                        <p className="font-bold">{(booking as any).workerName || 'Helper'}</p>
+                                                        <div className="flex items-center gap-2 text-xs text-white/60">
+                                                            {(booking as any).workerProfession && (
+                                                                <span>{(booking as any).workerProfession}</span>
+                                                            )}
+                                                            {(booking as any).workerExperience > 0 && (
+                                                                <>
+                                                                    <span>•</span>
+                                                                    <span>{(booking as any).workerExperience} yrs exp</span>
+                                                                </>
+                                                            )}
+                                                            {(booking as any).workerVerified && (
+                                                                <>
+                                                                    <span>•</span>
+                                                                    <span className="text-green-400">✓ Verified</span>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                    <button className="ml-auto text-xs bg-[var(--color-seva-accent)] px-3 py-1.5 rounded-lg hover:bg-[var(--color-seva-accent)]/80 transition-colors">
-                                                        Call
-                                                    </button>
+                                                    <div className="ml-auto flex flex-col gap-2">
+                                                        {booking.status === 'Completed' && (
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setReviewBooking(booking);
+                                                                }}
+                                                                className="text-xs bg-yellow-400/10 border border-yellow-400/20 px-4 py-2 rounded-lg hover:bg-yellow-400/20 transition-colors text-center font-bold flex items-center justify-center gap-2 text-yellow-400"
+                                                            >
+                                                                <Star size={14} />
+                                                                Rate Service
+                                                            </button>
+                                                        )}
+                                                        {booking.helperId && booking.helperId !== 'null' && (
+                                                            <Link 
+                                                                href={`/messages/${booking.helperId}`}
+                                                                className="text-xs bg-white/5 border border-white/10 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors text-center font-bold flex items-center justify-center gap-2 text-blue-400"
+                                                            >
+                                                                Chat
+                                                            </Link>
+                                                        )}
+                                                        <Link 
+                                                            href={`/bookings/track/${booking.id}`}
+                                                            className="text-xs bg-[var(--color-seva-accent)] px-4 py-2 rounded-lg hover:bg-[var(--color-seva-accent)]/80 transition-all font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+                                                        >
+                                                            <Navigation size={14} className="rotate-45" />
+                                                            Track
+                                                        </Link>
+                                                        {(booking as any).workerPhone && (
+                                                            <a href={`tel:${(booking as any).workerPhone}`} className="text-xs bg-white/5 border border-white/10 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors text-center">
+                                                                Call
+                                                            </a>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ) : (
                                                 <div className="bg-white/5 p-4 rounded-xl flex items-center gap-3 text-white/50 italic text-sm">
                                                     <User size={20} />
-                                                    {booking.status === 'Pending' ? 'Matching you with a helper...' : 'Worker will be assigned shortly.'}
+                                                    {booking.status === 'pending_acceptance' 
+                                                        ? '🔍 Finding a nearby helper for you... This updates in real-time.' 
+                                                        : booking.status === 'Pending' 
+                                                        ? 'Matching you with a helper...' 
+                                                        : 'Worker will be assigned shortly.'}
                                                 </div>
                                             )}
                                         </div>
@@ -314,6 +435,20 @@ export default function BookingsPage() {
                 </div>
             )
             }
+            
+            {reviewBooking && (
+                <ReviewModal 
+                    isOpen={!!reviewBooking}
+                    onClose={() => setReviewBooking(null)}
+                    bookingId={reviewBooking.id}
+                    workerId={(reviewBooking as any).workerId || ''}
+                    workerName={(reviewBooking as any).workerName || 'Professional'}
+                    onSubmitSuccess={() => {
+                        // Optional: show a toast or refresh
+                        fetchData();
+                    }}
+                />
+            )}
         </div >
     );
 }

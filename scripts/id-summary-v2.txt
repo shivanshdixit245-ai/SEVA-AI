@@ -1,0 +1,11 @@
+ID COMPARISON REPORT
+====================
+
+ID c4cb74cb-9420-46d1-a51e-6c2cb740d2d3: Profile Not Found: Cannot coerce the result to a single JSON object
+ID c4cb74cb-9420-46d1-a51e-6c2cb740d2d3: Worker Not Found: Cannot coerce the result to a single JSON object
+
+------------------
+ID c4cb74cb-9420-46d1-a51e-6c2c6662f22b: FOUND Profile! {"id":"c4cb74cb-9420-46d1-a51e-6c2c6662f22b","name":"test user helper","email":"test@gmail.com","role":"worker","created_at":"2026-03-14T07:35:27.238+00:00"}
+ID c4cb74cb-9420-46d1-a51e-6c2c6662f22b: FOUND in Workers! {"id":"c4cb74cb-9420-46d1-a51e-6c2c6662f22b","name":"test user helper","email":"test@gmail.com","created_at":"2026-03-14T07:35:27.238+00:00","profession":null,"experience":null,"phone":null,"bio":null,"address":null,"updated_at":"2026-03-14T07:35:27.656029+00:00","doc_type":null,"doc_number":null,"verification_status":"pending","is_verified":false}
+
+------------------

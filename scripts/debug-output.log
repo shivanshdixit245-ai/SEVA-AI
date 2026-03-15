@@ -1,0 +1,6 @@
+--- Testing Direct Fetch from Bookings ---
+✅ Fetch Success, found: 1 records
+First ID: BK-A17A5ED0
+--- Testing Realtime Subscription ---
+Subscription status: SUBSCRIBED
+Subscription check complete (timeout)

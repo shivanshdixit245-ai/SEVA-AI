@@ -1,0 +1,399 @@
+[2026-03-14T18:17:36.254Z] GET Bookings: Request for userId: NULL, workerId: fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T18:17:36.255Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:17:37.119Z] GET Bookings: Supabase Empty or Failed. Falling back to MongoDB/Local...
+[2026-03-14T18:18:06.291Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:18:07.127Z] GET Bookings: MongoDB fallback Failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:18:51.136Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:24:29.554Z] GET Bookings: Request for userId: NULL, workerId: fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T18:24:29.556Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:24:31.696Z] GET Bookings: Supabase Empty or Failed. Falling back to MongoDB/Local...
+[2026-03-14T18:24:59.548Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:24:59.548Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:24:59.554Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:25:01.704Z] GET Bookings: MongoDB fallback Failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:26:30.636Z] GET Bookings: Request for userId: NULL, workerId: fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T18:26:30.637Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:26:31.155Z] GET Bookings: Supabase Empty or Failed. Falling back to MongoDB/Local...
+[2026-03-14T18:26:50.230Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:26:50.234Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:27:01.174Z] GET Bookings: MongoDB fallback Failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:27:01.183Z] GET Bookings: Request for userId: NULL, workerId: fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T18:27:01.184Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:27:01.764Z] GET Bookings: Supabase Empty or Failed. Falling back to MongoDB/Local...
+[2026-03-14T18:27:14.312Z] GET Bookings: Request for userId: NULL, workerId: fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T18:27:14.312Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:27:14.872Z] GET Bookings: Supabase Empty or Failed. Falling back to MongoDB/Local...
+[2026-03-14T18:27:31.782Z] GET Bookings: MongoDB fallback Failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:27:31.782Z] GET Bookings: MongoDB fallback Failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:28:05.897Z] GET Bookings: Request for userId: NULL, workerId: NULL
+[2026-03-14T18:28:05.897Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:28:06.287Z] GET Bookings: Supabase found 20 results. Returning FAST.
+[2026-03-14T18:28:06.301Z] GET Bookings: Request for userId: NULL, workerId: NULL
+[2026-03-14T18:28:06.302Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:28:06.506Z] GET Bookings: Supabase found 20 results. Returning FAST.
+[2026-03-14T18:29:56.216Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:29:56.216Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:29:56.216Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:30:26.247Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:30:26.248Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:30:26.249Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:31:13.358Z] GET Bookings: Request for userId: NULL, workerId: fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T18:31:13.359Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:31:14.292Z] GET Bookings: Supabase Empty or Failed. Falling back to MongoDB/Local...
+[2026-03-14T18:31:30.462Z] POST Booking: Received request for Plumbing from 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-14T18:31:30.463Z] POST Booking: Enriched booking data with ID: BK-FA7BB961, status: pending_acceptance
+[2026-03-14T18:31:30.464Z] POST Booking: Attempting to sync to Supabase table: bookings
+[2026-03-14T18:31:30.982Z] POST Booking: Supabase Table 'bookings' Sync Successful
+[2026-03-14T18:31:30.983Z] POST Booking: Firing background MongoDB insert for BK-FA7BB961...
+[2026-03-14T18:31:30.985Z] POST Booking: Returning Success to client with ID: BK-FA7BB961
+[2026-03-14T18:31:32.971Z] GET Bookings: Request for userId: NULL, workerId: fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T18:31:32.972Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:31:33.151Z] GET Bookings: Supabase Empty or Failed. Falling back to MongoDB/Local...
+[2026-03-14T18:31:39.212Z] GET Bookings: Request for userId: NULL, workerId: NULL
+[2026-03-14T18:31:39.213Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:31:39.845Z] GET Bookings: Supabase found 21 results. Returning FAST.
+[2026-03-14T18:31:44.315Z] GET Bookings: MongoDB fallback Failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:31:44.317Z] GET Bookings: MongoDB fallback Failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:31:44.318Z] POST Booking: Background MongoDB connection failed MongoDB connection timeout (30000ms)
+[2026-03-14T18:31:48.497Z] GET Bookings: Request for userId: 445e8167-b86c-4f9b-b27c-3a04d4609c41, workerId: NULL
+[2026-03-14T18:31:48.498Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:31:48.858Z] GET Bookings: Supabase found 17 results. Returning FAST.
+[2026-03-14T18:32:12.980Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:32:12.985Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:32:12.986Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T18:32:12.987Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T18:32:12.990Z] LOCAL FIX: Saved message f0842789-b725-48ce-8bca-e95d9c763729 to local JSON fallback.
+[2026-03-14T18:32:13.581Z] API Broadcast Status: ok for message f0842789-b725-48ce-8bca-e95d9c763729
+[2026-03-14T18:32:43.054Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:32:43.057Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T18:32:43.057Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T18:32:43.059Z] LOCAL FIX: Saved message b1f3e821-2c74-49fc-86e9-4ea2d8f77b37 to local JSON fallback.
+[2026-03-14T18:32:43.062Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:32:43.066Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:32:43.511Z] API Broadcast Status: ok for message b1f3e821-2c74-49fc-86e9-4ea2d8f77b37
+[2026-03-14T18:33:13.108Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:33:13.109Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:33:51.606Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:35:08.212Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:35:08.216Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:35:08.217Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T18:35:08.217Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T18:35:08.219Z] LOCAL FIX: Saved message 324499ae-2fd7-4934-ae2a-ae3d9e669cea to local JSON fallback.
+[2026-03-14T18:35:08.985Z] API Broadcast Status: ok for message 324499ae-2fd7-4934-ae2a-ae3d9e669cea
+[2026-03-14T18:35:41.151Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:35:41.152Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:35:41.152Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T18:35:41.153Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T18:35:41.154Z] LOCAL FIX: Saved message 664acaa8-82b6-443d-8c8f-7168fabe0c36 to local JSON fallback.
+[2026-03-14T18:35:41.561Z] API Broadcast Status: ok for message 664acaa8-82b6-443d-8c8f-7168fabe0c36
+[2026-03-14T18:36:27.771Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:36:27.781Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:38:50.629Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:38:50.629Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:39:54.320Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:39:54.321Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:39:54.322Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:39:54.323Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:39:54.324Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T18:39:54.324Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T18:39:54.326Z] LOCAL FIX: Saved message bcbf8766-4c5c-4e5a-9744-c1b8d2a040b8 to local JSON fallback.
+[2026-03-14T18:39:54.333Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T18:39:54.335Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T18:39:54.337Z] LOCAL FIX: Saved message 66426c12-cf23-4c3c-84a0-d3484d0fe8c5 to local JSON fallback.
+[2026-03-14T18:39:54.905Z] API Broadcast Status: ok for message 66426c12-cf23-4c3c-84a0-d3484d0fe8c5
+[2026-03-14T18:39:55.067Z] API Broadcast Status: ok for message bcbf8766-4c5c-4e5a-9744-c1b8d2a040b8
+[2026-03-14T18:40:25.078Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:40:25.079Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:40:25.079Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T18:40:25.080Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T18:40:25.082Z] LOCAL FIX: Saved message 1908360b-2b93-4688-b3dd-2772aa46ef77 to local JSON fallback.
+[2026-03-14T18:40:25.641Z] API Broadcast Status: ok for message 1908360b-2b93-4688-b3dd-2772aa46ef77
+[2026-03-14T18:40:59.024Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T18:40:59.025Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T18:40:59.026Z] LOCAL FIX: Saved message bd14c47f-2ee2-43cf-9d9d-03133997afa0 to local JSON fallback.
+[2026-03-14T18:40:59.526Z] API Broadcast Status: ok for message bd14c47f-2ee2-43cf-9d9d-03133997afa0
+[2026-03-14T18:42:57.562Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:43:58.178Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:43:58.179Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:43:58.179Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:43:58.180Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T18:43:58.181Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T18:43:58.183Z] LOCAL FIX: Saved message 5a6f6f14-99a4-4e04-b6a9-3c2f5a339f6c to local JSON fallback.
+[2026-03-14T18:43:58.184Z] API Broadcast: Attempting to send message 5a6f6f14-99a4-4e04-b6a9-3c2f5a339f6c on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-null
+[2026-03-14T18:43:58.190Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:43:58.191Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T18:43:58.192Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T18:43:58.193Z] LOCAL FIX: Saved message fb0d2568-1af1-4d16-bba4-d1d7b4fac502 to local JSON fallback.
+[2026-03-14T18:43:58.195Z] API Broadcast: Attempting to send message fb0d2568-1af1-4d16-bba4-d1d7b4fac502 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T18:43:58.307Z] GET Bookings: Request for userId: NULL, workerId: fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T18:43:58.308Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:43:58.728Z] API Broadcast Result: ok for message 5a6f6f14-99a4-4e04-b6a9-3c2f5a339f6c
+[2026-03-14T18:43:58.734Z] API Broadcast Result: ok for message fb0d2568-1af1-4d16-bba4-d1d7b4fac502
+[2026-03-14T18:43:58.739Z] GET Bookings: Supabase found 1 results. Returning FAST.
+[2026-03-14T18:43:58.929Z] Global Broadcast Result: ok for recipient 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-14T18:43:58.934Z] Global Broadcast Result: ok for recipient null
+[2026-03-14T18:44:10.546Z] GET Bookings: Request for userId: 445e8167-b86c-4f9b-b27c-3a04d4609c41, workerId: NULL
+[2026-03-14T18:44:10.547Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:44:11.014Z] GET Bookings: Supabase found 17 results. Returning FAST.
+[2026-03-14T18:45:48.586Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:57:44.779Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:58:35.493Z] GET Bookings: Request for userId: 445e8167-b86c-4f9b-b27c-3a04d4609c41, workerId: NULL
+[2026-03-14T18:58:35.493Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:58:35.878Z] GET Bookings: Supabase found 17 results. Returning FAST.
+[2026-03-14T18:58:57.828Z] POST Booking: Received request for AC Service from 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-14T18:58:57.829Z] POST Booking: Enriched booking data with ID: BK-411C94DE, status: pending_acceptance
+[2026-03-14T18:58:57.830Z] POST Booking: Attempting to sync to Supabase table: bookings
+[2026-03-14T18:58:58.302Z] POST Booking: Supabase Table 'bookings' Sync Successful
+[2026-03-14T18:58:58.303Z] POST Booking: Firing background MongoDB insert for BK-411C94DE...
+[2026-03-14T18:58:58.308Z] POST Booking: Returning Success to client with ID: BK-411C94DE
+[2026-03-14T18:59:04.714Z] GET Bookings: Request for userId: NULL, workerId: NULL
+[2026-03-14T18:59:04.715Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:59:05.166Z] GET Bookings: Supabase found 22 results. Returning FAST.
+[2026-03-14T18:59:28.318Z] POST Booking: Background MongoDB connection failed MongoDB connection timeout (30000ms)
+[2026-03-14T18:59:34.141Z] GET Bookings: Request for userId: 445e8167-b86c-4f9b-b27c-3a04d4609c41, workerId: NULL
+[2026-03-14T18:59:34.143Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T18:59:34.662Z] GET Bookings: Supabase found 18 results. Returning FAST.
+[2026-03-14T18:59:55.413Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T18:59:55.415Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:00:25.780Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T19:00:25.780Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T19:00:25.792Z] LOCAL FIX: Saved message 3bfc45f6-e704-47ad-94ae-cb2951fe0f52 to local JSON fallback.
+[2026-03-14T19:00:25.794Z] API Broadcast: Attempting to send message 3bfc45f6-e704-47ad-94ae-cb2951fe0f52 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-null
+[2026-03-14T19:00:25.796Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T19:00:25.797Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T19:00:25.798Z] LOCAL FIX: Saved message f8587d98-05cb-4c4d-a607-b7071870a5c9 to local JSON fallback.
+[2026-03-14T19:00:25.800Z] API Broadcast: Attempting to send message f8587d98-05cb-4c4d-a607-b7071870a5c9 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T19:00:25.802Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T19:00:25.803Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T19:00:25.806Z] LOCAL FIX: Saved message 9f3cef92-4df2-427c-94c6-c15888c552c4 to local JSON fallback.
+[2026-03-14T19:00:25.807Z] API Broadcast: Attempting to send message 9f3cef92-4df2-427c-94c6-c15888c552c4 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-null
+[2026-03-14T19:00:26.485Z] API Broadcast Result: ok for message f8587d98-05cb-4c4d-a607-b7071870a5c9
+[2026-03-14T19:00:26.491Z] API Broadcast Result: ok for message 3bfc45f6-e704-47ad-94ae-cb2951fe0f52
+[2026-03-14T19:00:26.574Z] API Broadcast Result: ok for message 9f3cef92-4df2-427c-94c6-c15888c552c4
+[2026-03-14T19:00:26.778Z] Global Broadcast Result: ok for recipient null
+[2026-03-14T19:00:26.781Z] Global Broadcast Result: ok for recipient null
+[2026-03-14T19:00:26.851Z] Global Broadcast Result: ok for recipient 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-14T19:01:19.034Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:01:19.035Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:01:19.035Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:01:19.035Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:01:19.036Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T19:01:19.036Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T19:01:19.037Z] LOCAL FIX: Saved message db43076c-9f28-42e4-aadf-cfd200c8398e to local JSON fallback.
+[2026-03-14T19:01:19.038Z] API Broadcast: Attempting to send message db43076c-9f28-42e4-aadf-cfd200c8398e on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T19:01:19.041Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T19:01:19.041Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T19:01:19.042Z] LOCAL FIX: Saved message f6d97a04-53e1-4e72-b647-4de713f782db to local JSON fallback.
+[2026-03-14T19:01:19.044Z] API Broadcast: Attempting to send message f6d97a04-53e1-4e72-b647-4de713f782db on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-null
+[2026-03-14T19:01:19.722Z] API Broadcast Result: ok for message f6d97a04-53e1-4e72-b647-4de713f782db
+[2026-03-14T19:01:19.727Z] API Broadcast Result: ok for message db43076c-9f28-42e4-aadf-cfd200c8398e
+[2026-03-14T19:01:19.931Z] Global Broadcast Result: ok for recipient 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-14T19:01:20.131Z] Global Broadcast Result: ok for recipient null
+[2026-03-14T19:03:54.346Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:03:54.346Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:04:59.286Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T19:04:59.287Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T19:04:59.288Z] LOCAL FIX: Saved message 32308da4-e6c1-49a5-9328-de884e5133a7 to local JSON fallback.
+[2026-03-14T19:04:59.289Z] API Broadcast: Attempting to send message 32308da4-e6c1-49a5-9328-de884e5133a7 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-14T19:04:59.291Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T19:04:59.292Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T19:04:59.293Z] LOCAL FIX: Saved message 815652b6-bed9-42db-9970-0082cc108fff to local JSON fallback.
+[2026-03-14T19:04:59.294Z] API Broadcast: Attempting to send message 815652b6-bed9-42db-9970-0082cc108fff on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T19:04:59.296Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:04:59.296Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:04:59.297Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:04:59.297Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:05:00.188Z] API Broadcast Result: ok for message 32308da4-e6c1-49a5-9328-de884e5133a7
+[2026-03-14T19:05:00.192Z] API Broadcast Result: ok for message 815652b6-bed9-42db-9970-0082cc108fff
+[2026-03-14T19:05:00.499Z] Global Broadcast Result: ok for recipient 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-14T19:05:01.626Z] Global Broadcast Result: ok for recipient 5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-14T19:05:39.165Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T19:05:39.166Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T19:05:39.167Z] LOCAL FIX: Saved message 13acb7b2-96d4-4545-bc0c-db5c1b333393 to local JSON fallback.
+[2026-03-14T19:05:39.168Z] API Broadcast: Attempting to send message 13acb7b2-96d4-4545-bc0c-db5c1b333393 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T19:05:39.170Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T19:05:39.171Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T19:05:39.172Z] LOCAL FIX: Saved message 87d84efa-c467-4868-ad7c-e4b1054afd71 to local JSON fallback.
+[2026-03-14T19:05:39.174Z] API Broadcast: Attempting to send message 87d84efa-c467-4868-ad7c-e4b1054afd71 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-14T19:05:39.729Z] API Broadcast Result: ok for message 87d84efa-c467-4868-ad7c-e4b1054afd71
+[2026-03-14T19:05:39.734Z] API Broadcast Result: ok for message 13acb7b2-96d4-4545-bc0c-db5c1b333393
+[2026-03-14T19:05:39.926Z] Global Broadcast Result: ok for recipient 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-14T19:05:40.130Z] Global Broadcast Result: ok for recipient 5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-14T19:09:33.878Z] GET Bookings: Request for userId: 445e8167-b86c-4f9b-b27c-3a04d4609c41, workerId: NULL
+[2026-03-14T19:09:33.879Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T19:09:35.186Z] GET Bookings: Supabase found 18 results. Returning FAST.
+[2026-03-14T19:09:36.311Z] GET Bookings: Request for userId: 445e8167-b86c-4f9b-b27c-3a04d4609c41, workerId: NULL
+[2026-03-14T19:09:36.311Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T19:09:36.885Z] GET Bookings: Supabase found 18 results. Returning FAST.
+[2026-03-14T19:10:06.710Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:10:06.711Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:10:44.046Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:11:33.059Z] GET Bookings: Request for userId: 445e8167-b86c-4f9b-b27c-3a04d4609c41, workerId: NULL
+[2026-03-14T19:11:33.060Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T19:11:33.424Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:11:33.425Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:11:33.425Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:11:33.426Z] GET Messages: MongoDB connection failed: MongoDB connection timeout (30000ms)
+[2026-03-14T19:11:33.426Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T19:11:33.426Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T19:11:33.428Z] LOCAL FIX: Saved message 7023294b-62ca-4900-9622-8dcc4119a66e to local JSON fallback.
+[2026-03-14T19:11:33.428Z] API Broadcast: Attempting to send message 7023294b-62ca-4900-9622-8dcc4119a66e on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T19:11:33.431Z] POST Message: MongoDB Save FAILED: MongoDB connection timeout (30000ms)
+[2026-03-14T19:11:33.432Z] POST Message: Attempting LOCAL JSON fallback...
+[2026-03-14T19:11:33.434Z] LOCAL FIX: Saved message e2b5e8fb-57d7-48d8-8096-84c2054000c5 to local JSON fallback.
+[2026-03-14T19:11:33.434Z] API Broadcast: Attempting to send message e2b5e8fb-57d7-48d8-8096-84c2054000c5 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T19:11:33.465Z] GET Bookings: Supabase found 18 results. Returning FAST.
+[2026-03-14T19:11:33.475Z] GET Bookings: Request for userId: 445e8167-b86c-4f9b-b27c-3a04d4609c41, workerId: NULL
+[2026-03-14T19:11:33.476Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T19:11:33.627Z] GET Bookings: Supabase found 18 results. Returning FAST.
+[2026-03-14T19:11:34.033Z] API Broadcast Result: ok for message 7023294b-62ca-4900-9622-8dcc4119a66e
+[2026-03-14T19:11:34.135Z] API Broadcast Result: ok for message e2b5e8fb-57d7-48d8-8096-84c2054000c5
+[2026-03-14T19:11:34.239Z] Global Broadcast Result: ok for recipient 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-14T19:11:34.340Z] Global Broadcast Result: ok for recipient fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T19:11:48.977Z] GET Bookings: Request for userId: NULL, workerId: fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T19:11:48.978Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T19:11:49.394Z] GET Bookings: Supabase found 2 results. Returning FAST.
+[2026-03-14T19:11:49.407Z] GET Bookings: Request for userId: NULL, workerId: fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T19:11:49.408Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T19:11:49.602Z] GET Bookings: Supabase found 2 results. Returning FAST.
+[2026-03-14T19:11:57.710Z] GET Bookings: Request for userId: NULL, workerId: fab07538-d672-49d4-916c-c6c9b8cf88c6
+[2026-03-14T19:11:57.711Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-14T19:11:57.895Z] GET Bookings: Supabase found 2 results. Returning FAST.
+[2026-03-15T06:20:13.085Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:20:13.086Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:20:13.681Z] GET Bookings: Supabase found 22 results. Returning FAST.
+[2026-03-15T06:20:13.706Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:20:13.707Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:20:13.884Z] GET Bookings: Supabase found 22 results. Returning FAST.
+[2026-03-15T06:20:54.940Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:20:54.940Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:20:55.152Z] GET Bookings: Supabase found 2 results. Returning FAST.
+[2026-03-15T06:20:55.175Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:20:55.176Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:20:55.561Z] GET Bookings: Supabase found 2 results. Returning FAST.
+[2026-03-15T06:25:09.924Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:25:09.925Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:25:10.955Z] GET Bookings: Supabase found 22 results. Returning FAST.
+[2026-03-15T06:25:10.976Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:25:10.977Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:25:11.171Z] GET Bookings: Supabase found 22 results. Returning FAST.
+[2026-03-15T06:25:27.541Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:25:27.542Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:25:27.865Z] GET Bookings: Supabase found 18 results. Returning FAST.
+[2026-03-15T06:25:27.884Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:25:27.884Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:25:28.055Z] GET Bookings: Supabase found 18 results. Returning FAST.
+[2026-03-15T06:25:34.247Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:25:34.248Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:25:34.721Z] GET Bookings: Supabase found 2 results. Returning FAST.
+[2026-03-15T06:25:34.738Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:25:34.739Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:25:34.868Z] GET Bookings: Supabase found 2 results. Returning FAST.
+[2026-03-15T06:25:36.017Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:25:36.018Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:25:36.258Z] GET Bookings: Supabase found 22 results. Returning FAST.
+[2026-03-15T06:25:36.275Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:25:36.276Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:25:36.403Z] GET Bookings: Supabase found 22 results. Returning FAST.
+[2026-03-15T06:29:12.680Z] POST Booking: Received request for AC Service from 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-15T06:29:12.684Z] POST Booking: Enriched booking data with ID: BK-E232A22B, status: pending_acceptance
+[2026-03-15T06:29:12.685Z] POST Booking: Attempting to sync to Supabase table: bookings
+[2026-03-15T06:29:15.693Z] POST Booking: Supabase Table 'bookings' Sync Successful
+[2026-03-15T06:29:15.694Z] POST Booking: Firing background MongoDB insert for BK-E232A22B...
+[2026-03-15T06:29:15.695Z] POST Booking: Returning Success to client with ID: BK-E232A22B
+[2026-03-15T06:29:15.898Z] POST Booking: Background MongoDB saved successfully for ID: BK-E232A22B
+[2026-03-15T06:29:53.547Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:29:53.548Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:29:53.737Z] GET Bookings: Supabase found 1 results. Returning FAST.
+[2026-03-15T06:29:53.751Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:29:53.752Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:29:53.993Z] GET Bookings: Supabase found 1 results. Returning FAST.
+[2026-03-15T06:29:55.864Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:29:55.865Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:29:56.043Z] GET Bookings: Supabase found 23 results. Returning FAST.
+[2026-03-15T06:29:56.061Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:29:56.062Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:29:56.247Z] GET Bookings: Supabase found 23 results. Returning FAST.
+[2026-03-15T06:32:25.902Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:32:25.903Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:32:26.587Z] GET Bookings: Supabase found 23 results. Returning FAST.
+[2026-03-15T06:32:26.606Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:32:26.607Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:32:26.881Z] GET Bookings: Supabase found 23 results. Returning FAST.
+[2026-03-15T06:37:00.802Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:37:00.803Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:37:01.346Z] GET Bookings: Supabase found 23 results. Returning FAST.
+[2026-03-15T06:37:01.376Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:37:01.377Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:37:01.531Z] GET Bookings: Supabase found 23 results. Returning FAST.
+[2026-03-15T06:37:01.552Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:37:01.553Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:37:01.712Z] GET Bookings: Supabase found 23 results. Returning FAST.
+[2026-03-15T06:37:06.784Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:37:06.785Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:37:07.111Z] GET Bookings: Supabase found 23 results. Returning FAST.
+[2026-03-15T06:37:15.230Z] POST Booking: Received request for Deep Cleaning from 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-15T06:37:15.231Z] POST Booking: Enriched booking data with ID: BK-743E67E2, status: pending_acceptance
+[2026-03-15T06:37:15.232Z] POST Booking: Attempting to sync to Supabase table: bookings
+[2026-03-15T06:37:15.756Z] POST Booking: Supabase Table 'bookings' Sync Successful
+[2026-03-15T06:37:15.757Z] POST Booking: Firing background MongoDB insert for BK-743E67E2...
+[2026-03-15T06:37:15.765Z] POST Booking: Returning Success to client with ID: BK-743E67E2
+[2026-03-15T06:37:17.156Z] POST Booking: Background MongoDB saved successfully for ID: BK-743E67E2
+[2026-03-15T06:38:36.421Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:38:36.421Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:38:37.002Z] GET Bookings: Supabase found 20 results. Returning FAST.
+[2026-03-15T06:38:37.025Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:38:37.026Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:38:37.274Z] GET Bookings: Supabase found 20 results. Returning FAST.
+[2026-03-15T06:42:26.538Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:42:26.539Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:42:26.857Z] GET Bookings: Supabase found 20 results. Returning FAST.
+[2026-03-15T06:42:26.875Z] GET Bookings: Validated request for user: DEBUG
+[2026-03-15T06:42:26.875Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:42:27.071Z] GET Bookings: Supabase found 20 results. Returning FAST.
+[2026-03-15T06:43:35.568Z] GET Bookings: Validated request for user: test152@gmail.com
+[2026-03-15T06:43:35.568Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:43:35.705Z] GET Bookings: Supabase found 1 results. Returning FAST.
+[2026-03-15T06:43:36.163Z] GET Bookings: Validated request for user: test152@gmail.com
+[2026-03-15T06:43:36.164Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:43:36.331Z] GET Bookings: Validated request for user: test152@gmail.com
+[2026-03-15T06:43:36.332Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:43:36.381Z] GET Bookings: Supabase found 1 results. Returning FAST.
+[2026-03-15T06:43:36.468Z] GET Bookings: Supabase found 24 results. Returning FAST.
+[2026-03-15T06:43:36.773Z] GET Bookings: Validated request for user: test152@gmail.com
+[2026-03-15T06:43:36.773Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:43:36.892Z] GET Bookings: Supabase found 24 results. Returning FAST.
+[2026-03-15T06:43:51.245Z] API Broadcast: Attempting to send message 4e5cf4f8-bc74-4379-bc1c-29943d675a5e on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-15T06:43:51.576Z] API Broadcast Result: ok for message 4e5cf4f8-bc74-4379-bc1c-29943d675a5e
+[2026-03-15T06:43:52.081Z] Global Broadcast Result: ok for recipient 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-15T06:45:23.653Z] API Broadcast: Attempting to send message 9530c23e-1bc4-4e61-ae0f-3c817199d4ce on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-15T06:45:24.367Z] API Broadcast Result: ok for message 9530c23e-1bc4-4e61-ae0f-3c817199d4ce
+[2026-03-15T06:45:24.822Z] Global Broadcast Result: ok for recipient 5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-15T06:46:16.646Z] API Broadcast: Attempting to send message e0e1b5f2-1ceb-4968-b25d-3a3ddf1bd528 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-15T06:46:16.852Z] API Broadcast Result: ok for message e0e1b5f2-1ceb-4968-b25d-3a3ddf1bd528
+[2026-03-15T06:46:17.146Z] Global Broadcast Result: ok for recipient 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-15T06:46:20.743Z] API Broadcast: Attempting to send message c6755b83-4958-46d6-be6b-bbf88129e8d5 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-15T06:46:20.938Z] API Broadcast Result: ok for message c6755b83-4958-46d6-be6b-bbf88129e8d5
+[2026-03-15T06:46:21.153Z] Global Broadcast Result: ok for recipient 5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-15T06:46:28.291Z] API Broadcast: Attempting to send message 4cb7d344-fd0f-425c-a4f2-265a3c00d520 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-15T06:46:28.687Z] API Broadcast Result: ok for message 4cb7d344-fd0f-425c-a4f2-265a3c00d520
+[2026-03-15T06:46:29.006Z] Global Broadcast Result: ok for recipient 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-15T06:46:38.959Z] API Broadcast: Attempting to send message 87ae96d2-4d69-43b2-8932-a93213de44e8 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-15T06:46:39.263Z] API Broadcast Result: ok for message 87ae96d2-4d69-43b2-8932-a93213de44e8
+[2026-03-15T06:46:39.542Z] Global Broadcast Result: ok for recipient 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-15T06:46:42.965Z] API Broadcast: Attempting to send message 8cb61ff3-83b2-4813-8d7a-c398d9c84236 on channel dm-445e8167-b86c-4f9b-b27c-3a04d4609c41-5dc80af1-e836-4972-9fe7-64f3993c0647
+[2026-03-15T06:46:43.183Z] API Broadcast Result: ok for message 8cb61ff3-83b2-4813-8d7a-c398d9c84236
+[2026-03-15T06:46:43.357Z] Global Broadcast Result: ok for recipient 445e8167-b86c-4f9b-b27c-3a04d4609c41
+[2026-03-15T06:58:47.111Z] POST Booking: Received request for Deep Cleaning from 76c8410a-9e99-47d2-97ff-1e35ca21e8fa
+[2026-03-15T06:58:47.113Z] POST Booking: Enriched booking data with ID: BK-C9374E3A, status: pending_acceptance
+[2026-03-15T06:58:47.115Z] POST Booking: Attempting to sync to Supabase table: bookings
+[2026-03-15T06:58:47.678Z] POST Booking: Supabase Table 'bookings' Sync Successful
+[2026-03-15T06:58:47.679Z] POST Booking: Firing background MongoDB insert for BK-C9374E3A...
+[2026-03-15T06:58:47.683Z] POST Booking: Returning Success to client with ID: BK-C9374E3A
+[2026-03-15T06:58:47.774Z] POST Booking: Background MongoDB saved successfully for ID: BK-C9374E3A
+[2026-03-15T06:59:05.032Z] GET Bookings: Validated request for user: test@example.com
+[2026-03-15T06:59:05.034Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:59:05.383Z] GET Bookings: Supabase found 1 results. Returning FAST.
+[2026-03-15T06:59:05.796Z] GET Bookings: Validated request for user: test@example.com
+[2026-03-15T06:59:05.797Z] GET Bookings: Querying Supabase (PRIMARY)...
+[2026-03-15T06:59:06.005Z] GET Bookings: Supabase found 1 results. Returning FAST.
