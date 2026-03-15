@@ -24,17 +24,19 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get('userId');
         const workerId = searchParams.get('workerId');
+        const status = searchParams.get('status');
         
         // SECURITY: Verify session and ownership
         const isAdmin = user?.role === 'admin';
         const isSelf = user?.id && (user.id === userId || user.id === workerId);
+        const isWorkerFetchingPending = user?.role === 'worker' && status === 'pending_acceptance';
 
         if (!user && process.env.NODE_ENV === 'production') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!isAdmin && !isSelf && process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ error: 'Forbidden: You can only access your own bookings' }, { status: 403 });
+        if (!isAdmin && !isSelf && !isWorkerFetchingPending && process.env.NODE_ENV === 'production') {
+            return NextResponse.json({ error: 'Forbidden: Access denied' }, { status: 403 });
         }
 
         const isAdminDebug = isAdmin || (process.env.NODE_ENV === 'development' && (!userId && !workerId));
@@ -46,7 +48,11 @@ export async function GET(request: NextRequest) {
             if (!isAdminDebug) {
                 if (userId) query = query.eq('user_id', userId);
                 if (workerId) query = query.eq('worker_id', workerId);
+                if (status) query = query.eq('status', status);
+            } else if (status) {
+                query = query.eq('status', status);
             }
+
 
             const { data, error } = await query;
             
