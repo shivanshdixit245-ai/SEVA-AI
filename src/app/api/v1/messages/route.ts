@@ -133,14 +133,16 @@ export async function POST(request: NextRequest) {
             const safeReceiverId = String(receiverId).toLowerCase().trim();
             const channelName = `dm-${[safeSenderId, safeReceiverId].sort().join('-')}`;
             
-            console.log(`[API REALTIME] Broadcasting to ${channelName}`);
+            console.log(`[API REALTIME] Constructing channel: ${channelName}`);
             
             const channel = supabaseAdmin.channel(channelName);
-            await channel.send({
+            const broadcastStatus = await channel.send({
                 type: 'broadcast',
                 event: 'dm-receive',
                 payload: newMessage,
             });
+            
+            console.log(`[API REALTIME] Broadcast Result for ${channelName}:`, broadcastStatus);
             
             // Broadcast to the global user channel for notifications
             const globalChannel = `user-${safeReceiverId}`;
