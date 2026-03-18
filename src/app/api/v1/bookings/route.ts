@@ -35,7 +35,16 @@ export async function GET(request: NextRequest) {
         const targetUserId = rawUserId || (!rawWorkerId ? user.id : null);
         const targetWorkerId = rawWorkerId;
 
-        const userPool = targetUserId ? await resolveFullIdentity(targetUserId) : null;
+        const userPoolById = targetUserId ? await resolveFullIdentity(targetUserId) : null;
+        // DOUBLE-RESOLUTION: If this is the current user, also resolve by their email to catch disconnected legacy MongoDB records
+        const userPoolByEmail = (!rawUserId && !rawWorkerId && user.email) ? await resolveFullIdentity(user.email) : null;
+        
+        const userPool = targetUserId ? {
+            uuid: userPoolById?.uuid || userPoolByEmail?.uuid || null,
+            slug: userPoolById?.slug || userPoolByEmail?.slug || null,
+            email: userPoolById?.email || userPoolByEmail?.email || null
+        } : null;
+
         const workerPool = targetWorkerId ? await resolveFullIdentity(targetWorkerId) : null;
 
         // SECURITY: Verify session and ownership
@@ -44,6 +53,7 @@ export async function GET(request: NextRequest) {
         
         // Ownership check: session user UUID must match one of the queried pools
         const isSelf = (userPool?.uuid === user.id) || 
+                       (userPoolByEmail?.uuid === user.id) ||
                        (workerPool?.uuid === user.id) ||
                        (!rawUserId && !rawWorkerId); // Default to self if no specific filter
 

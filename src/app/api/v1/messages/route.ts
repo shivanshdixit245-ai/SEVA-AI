@@ -19,9 +19,22 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Missing userId or helperId' }, { status: 400 });
         }
 
-        // UNIVERSAL IDENTITY RESOLUTION: Find all possible aliases
-        const userPool = await resolveFullIdentity(rawUserId);
-        const helperPool = await resolveFullIdentity(rawHelperId);
+        // UNIVERSAL IDENTITY RESOLUTION: Find all possible aliases (Double-Resolution to catch disconnected records)
+        const userPoolById = await resolveFullIdentity(rawUserId);
+        const userPoolByEmail = (user && user.id === rawUserId && user.email) ? await resolveFullIdentity(user.email) : null;
+        const userPool = {
+            uuid: userPoolById.uuid || userPoolByEmail?.uuid || null,
+            slug: userPoolById.slug || userPoolByEmail?.slug || null,
+            email: userPoolById.email || userPoolByEmail?.email || null
+        };
+
+        const helperPoolById = await resolveFullIdentity(rawHelperId);
+        const helperPoolByEmail = (user && user.id === rawHelperId && user.email) ? await resolveFullIdentity(user.email) : null;
+        const helperPool = {
+            uuid: helperPoolById.uuid || helperPoolByEmail?.uuid || null,
+            slug: helperPoolById.slug || helperPoolByEmail?.slug || null,
+            email: helperPoolById.email || helperPoolByEmail?.email || null
+        };
 
         // Aliases for Supabase checks
         const uAs = [userPool.uuid, userPool.slug].filter(Boolean) as string[];
