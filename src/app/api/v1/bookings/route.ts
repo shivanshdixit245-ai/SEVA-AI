@@ -27,16 +27,18 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
         
         // SECURITY: Verify session and ownership
-        const isAdmin = user?.role === 'admin';
+        const userRole = String(user?.role || '').toLowerCase();
+        const isAdmin = userRole === 'admin';
         const isSelf = user?.id && (user.id === userId || user.id === workerId);
-        const isWorkerFetchingPending = user?.role === 'worker' && status === 'pending_acceptance';
+        const isWorkerFetchingPending = userRole === 'worker' && status === 'pending_acceptance';
 
         if (!user && process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
         }
 
         if (!isAdmin && !isSelf && !isWorkerFetchingPending && process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ error: 'Forbidden: Access denied' }, { status: 403 });
+            console.warn(`[SECURITY] Forbidden access attempt by ${user?.email} (${userRole})`);
+            return NextResponse.json({ error: 'Forbidden: You do not have permission to view these bookings' }, { status: 403 });
         }
 
         const isAdminDebug = isAdmin || (process.env.NODE_ENV === 'development' && (!userId && !workerId));

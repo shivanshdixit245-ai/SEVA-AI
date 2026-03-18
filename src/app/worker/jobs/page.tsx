@@ -33,7 +33,10 @@ export default function WorkerJobsPage() {
 
     // Fetch pending jobs using the reliable server-side pattern
     const fetchJobs = useCallback(async () => {
+        if (!user) return; // Wait for session
+        
         try {
+            setError(null);
             const res = await fetch('/api/v1/bookings?status=pending_acceptance', {
                 headers: getAuthHeaders()
             });
@@ -63,13 +66,15 @@ export default function WorkerJobsPage() {
         } finally {
             if (mountedRef.current) setLoading(false);
         }
-    }, []);
+    }, [user, getAuthHeaders]);
 
     useEffect(() => {
         mountedRef.current = true;
-        fetchJobs();
+        if (user) {
+            fetchJobs();
+        }
         return () => { mountedRef.current = false; };
-    }, [fetchJobs]);
+    }, [user, fetchJobs]);
 
     // Supabase Realtime: instantly show new bookings or remove accepted ones
     useSupabaseRealtime({
@@ -100,7 +105,7 @@ export default function WorkerJobsPage() {
                 setJobs(prev => prev.filter(j => j.id !== oldRecord.id));
             }
         },
-        enabled: true
+        enabled: !!user
     });
 
     const handleAcceptJob = async (job: Job) => {
