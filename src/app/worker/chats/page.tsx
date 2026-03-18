@@ -123,7 +123,7 @@ export default function WorkerChatsPage() {
         enabled: !!user
     });
 
-    // Realtime Database listener for new messages
+    // Realtime Database & Broadcast listener
     useEffect(() => {
         if (!user || !selectedThread) return;
         
@@ -133,13 +133,41 @@ export default function WorkerChatsPage() {
         let resolvedClientId = isUUID(selectedThread.clientId) ? selectedThread.clientId : null;
 
         if (!resolvedClientId) {
-            console.log('[REALTIME DEBUG] Worker delaying DB subscribe until Client UUID is verified...');
+            console.log('[REALTIME DEBUG] Worker delaying shared room subscribe until Client UUID is verified...');
             return;
         }
 
+        const finalClientId = resolvedClientId;
+        const sortedIds = [user.id, finalClientId].sort();
+        const roomChannelName = `room:${sortedIds[0]}-${sortedIds[1]}`;
+
+        console.log(`[REALTIME DEBUG] Worker joining shared room: ${roomChannelName}`);
+
         // Listen for new messages where the worker is the receiver
         const channel = supabase
-            .channel(`public:messages:worker-${user.id}`)
+            .channel(roomChannelName)
+            // 1. Listen for Instant Broadcasts (Fast)
+            .on('broadcast', { event: 'dm-receive' }, (payload) => {
+                const msg = payload.payload as any;
+                console.log('[REALTIME DEBUG] Worker received broadcast:', msg);
+                setMessages(prev => {
+                    if (prev.find(m => m.id === msg.id)) return prev;
+                    return [...prev, {
+                        id: msg.id,
+                        text: msg.content,
+                        sender: 'client',
+                        timestamp: new Date(msg.timestamp).toISOString()
+                    }];
+                });
+                setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
+            })
+            // 2. Listen for Typing Indicators
+            .on('broadcast', { event: 'typing' }, (payload) => {
+                if (payload.payload.senderId !== user.id) {
+                    setIsTyping(payload.payload.isTyping);
+                }
+            })
+            // 3. Listen for Database Changes (Robust)
             .on(
                 'postgres_changes',
                 {
@@ -152,8 +180,7 @@ export default function WorkerChatsPage() {
                     const record = payload.new as any;
                     console.log('[REALTIME DEBUG] Worker received DB change:', record);
                     
-                    // Check if this message is from the currently active client
-                    if (record.sender_id === resolvedClientId) {
+                    if (record.sender_id === finalClientId) {
                         setMessages(prev => {
                             if (prev.find(m => m.id === record.id)) return prev;
                             return [...prev, {
@@ -168,14 +195,14 @@ export default function WorkerChatsPage() {
                 }
             )
             .subscribe((status) => {
-                console.log(`[REALTIME DEBUG] Worker DB Subscription [public:messages:worker-${user.id}]:`, status);
+                console.log(`[REALTIME DEBUG] Worker Room Subscription [${roomChannelName}]:`, status);
                 if (status === 'SUBSCRIBED') {
                     channelRef.current = channel;
                 }
             });
 
         return () => { 
-            console.log('[REALTIME DEBUG] Worker unsubscribing from DB changes');
+            console.log('[REALTIME DEBUG] Worker leaving shared room');
             supabase.removeChannel(channel);
             channelRef.current = null;
         };

@@ -143,7 +143,7 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
         };
     }, [user, helperId, fetchHelper, fetchMessages]);
 
-    // Realtime Database listener for new messages
+    // Realtime Database & Broadcast listener
     useEffect(() => {
         if (!user) return;
 
@@ -151,15 +151,38 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
         let resolvedPeerId = helper?.supabaseId || (isUUID(helperId) ? helperId : null);
         
         if (!resolvedPeerId && !isUUID(helperId)) {
-            console.log('[REALTIME DEBUG] Delaying DB subscribe until Peer UUID is resolved...');
+            console.log('[REALTIME DEBUG] Delaying shared room subscribe until Peer UUID is resolved...');
             return;
         }
 
         const finalPeerId = resolvedPeerId || helperId;
         
-        // Listen for new messages inserted into the database
+        // UNIQUE SHARED ROOM: Both parties must join the EXACT same channel name for broadcast to work
+        const sortedIds = [user.id, finalPeerId].sort();
+        const roomChannelName = `room:${sortedIds[0]}-${sortedIds[1]}`;
+        
+        console.log(`[REALTIME DEBUG] Client joining shared room: ${roomChannelName}`);
+
         const channel = supabase
-            .channel(`public:messages:dm-${user.id}`)
+            .channel(roomChannelName)
+            // 1. Listen for Instant Broadcasts (Fast)
+            .on('broadcast', { event: 'dm-receive' }, (payload) => {
+                const msg = payload.payload as DirectMessage;
+                console.log('[REALTIME DEBUG] Client received broadcast:', msg);
+                setMessages(prev => {
+                    if (prev.find(m => m.id === msg.id)) return prev;
+                    const updated = [...prev, msg];
+                    return updated.sort((a, b) => a.timestamp - b.timestamp);
+                });
+                setTimeout(() => scrollToBottom(true), 10);
+            })
+            // 2. Listen for Typing Indicators
+            .on('broadcast', { event: 'typing' }, (payload) => {
+                if (payload.payload.senderId !== user.id) {
+                    setIsTyping(payload.payload.isTyping);
+                }
+            })
+            // 3. Listen for Database Changes (Robust)
             .on(
                 'postgres_changes',
                 {
@@ -172,7 +195,6 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
                     const record = payload.new as any;
                     console.log('[REALTIME DEBUG] Client received DB change:', record);
 
-                    // Check if this message is from the correct peer
                     if (record.sender_id === finalPeerId) {
                         const newMsg: DirectMessage = {
                             id: record.id,
@@ -194,14 +216,14 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
                 }
             )
             .subscribe((status) => {
-                console.log(`[REALTIME DEBUG] Client DB Subscription [public:messages:dm-${user.id}]:`, status);
+                console.log(`[REALTIME DEBUG] Client Room Subscription [${roomChannelName}]:`, status);
                 if (status === 'SUBSCRIBED') {
                     channelRef.current = channel;
                 }
             });
 
         return () => {
-            console.log('[REALTIME DEBUG] Client unsubscribing from DB changes');
+            console.log('[REALTIME DEBUG] Client leaving shared room');
             supabase.removeChannel(channel);
             channelRef.current = null;
         };
