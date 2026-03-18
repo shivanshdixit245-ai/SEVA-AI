@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
         const userPoolById = targetUserId ? await resolveFullIdentity(targetUserId) : null;
         // DOUBLE-RESOLUTION: If this is the current user, also resolve by their email to catch disconnected legacy MongoDB records
-        const userPoolByEmail = (!rawUserId && !rawWorkerId && user.email) ? await resolveFullIdentity(user.email) : null;
+        const userPoolByEmail = (targetUserId === user.id && user.email) ? await resolveFullIdentity(user.email) : null;
         
         const userPool = targetUserId ? {
             uuid: userPoolById?.uuid || userPoolByEmail?.uuid || null,
@@ -45,7 +45,14 @@ export async function GET(request: NextRequest) {
             email: userPoolById?.email || userPoolByEmail?.email || null
         } : null;
 
-        const workerPool = targetWorkerId ? await resolveFullIdentity(targetWorkerId) : null;
+        const workerPoolById = targetWorkerId ? await resolveFullIdentity(targetWorkerId) : null;
+        const workerPoolByEmail = (targetWorkerId === user.id && user.email) ? await resolveFullIdentity(user.email) : null;
+
+        const workerPool = targetWorkerId ? {
+            uuid: workerPoolById?.uuid || workerPoolByEmail?.uuid || null,
+            slug: workerPoolById?.slug || workerPoolByEmail?.slug || null,
+            email: workerPoolById?.email || workerPoolByEmail?.email || null
+        } : null;
 
         // SECURITY: Verify session and ownership
         const userRole = String(user?.role || '').toLowerCase();
