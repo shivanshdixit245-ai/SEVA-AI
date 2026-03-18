@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export type UserRole = 'client' | 'worker' | 'admin';
 
@@ -61,6 +62,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('sevaai_selected_location', selectedLocation);
     }, [selectedLocation]);
 
+    // SYNC: Keep Supabase client in sync with our Auth state
+    // This is CRITICAL for real-time subscriptions to work (they need a session)
+    useEffect(() => {
+        if (user?.token) {
+            console.log('[AUTH SYNC] Syncing session to Supabase client...');
+            supabase.auth.setSession({
+                access_token: user.token,
+                refresh_token: '' // API doesn't provide refresh token yet, but access_token is enough for realtime
+            }).catch(err => console.error('[AUTH SYNC] Error setting session:', err));
+        } else if (!user) {
+            console.log('[AUTH SYNC] Clearing Supabase session...');
+            supabase.auth.signOut().catch(() => {});
+        }
+    }, [user]);
+
     const login = async (email: string, password: string, role: UserRole) => {
         console.log('Login attempt:', { email, role });
         try {
@@ -73,6 +89,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = await res.json();
             if (res.ok && data.user) {
                 const userWithToken = { ...data.user, token: data.token };
+                
+                // Set Supabase session IMMEDIATELY before updating state
+                await supabase.auth.setSession({
+                    access_token: data.token,
+                    refresh_token: ''
+                }).catch(() => {});
+
                 setUser(userWithToken);
                 localStorage.setItem('sevaai_user', JSON.stringify(userWithToken));
                 return { success: true };
@@ -96,9 +119,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log('Signup response status:', res.status);
             const data = await res.json();
             if (res.ok && data.user) {
-                // For signup, if the API doesn't return a token yet, it might need a subsequent login
-                // However, we'll try to use the token if provided.
                 const userWithToken = { ...data.user, token: data.token };
+                
+                // Set Supabase session IMMEDIATELY
+                if (data.token) {
+                    await supabase.auth.setSession({
+                        access_token: data.token,
+                        refresh_token: ''
+                    }).catch(() => {});
+                }
+
                 setUser(userWithToken);
                 localStorage.setItem('sevaai_user', JSON.stringify(userWithToken));
                 return { success: true };
