@@ -41,8 +41,14 @@ export default function WorkerDashboardPage() {
             }));
 
             if (mountedRef.current) {
-                setActiveJobs(all.filter((j: any) => ['Confirmed', 'In Progress'].includes(j.status)));
-                setCompletedJobs(all.filter((j: any) => j.status === 'Completed'));
+                const active = all.filter((j: any) => {
+                    const status = (j.status || '').toLowerCase();
+                    return ['confirmed', 'in progress', 'in_progress'].includes(status);
+                });
+                const completed = all.filter((j: any) => (j.status || '').toLowerCase() === 'completed');
+                
+                setActiveJobs(active);
+                setCompletedJobs(completed);
                 setError(null);
             }
         } catch (err: any) {
@@ -81,19 +87,21 @@ export default function WorkerDashboardPage() {
             };
 
             if (payload.eventType === 'INSERT') {
-                if (['Confirmed', 'In Progress'].includes(mappedJob.status)) {
+                const status = (mappedJob.status || '').toLowerCase();
+                if (['confirmed', 'in progress', 'in_progress'].includes(status)) {
                     setActiveJobs(prev => [mappedJob, ...prev]);
                 }
             } else if (payload.eventType === 'UPDATE') {
                 // Update active jobs
                 setActiveJobs(prev => {
-                    const isStillActive = ['Confirmed', 'In Progress'].includes(mappedJob.status);
+                    const status = (mappedJob.status || '').toLowerCase();
+                    const isStillActive = ['confirmed', 'in progress', 'in_progress'].includes(status);
                     const list = prev.map(j => j.id === mappedJob.id ? { ...j, ...mappedJob } : j);
                     return isStillActive ? list : list.filter(j => j.id !== mappedJob.id);
                 });
 
                 // Update completed jobs
-                if (mappedJob.status === 'Completed') {
+                if ((mappedJob.status || '').toLowerCase() === 'completed') {
                     setCompletedJobs(prev => {
                         if (prev.find(j => j.id === mappedJob.id)) {
                             return prev.map(j => j.id === mappedJob.id ? { ...j, ...mappedJob } : j);
@@ -101,7 +109,8 @@ export default function WorkerDashboardPage() {
                         return [mappedJob, ...prev];
                     });
                 }
-            } else if (payload.eventType === 'DELETE') {
+            }
+ else if (payload.eventType === 'DELETE') {
                 setActiveJobs(prev => prev.filter(j => j.id !== record.id));
                 setCompletedJobs(prev => prev.filter(j => j.id !== record.id));
             }

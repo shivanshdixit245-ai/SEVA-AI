@@ -21,49 +21,64 @@ function estimatePrice(serviceType: string): number {
 export async function GET(request: NextRequest) {
     try {
         const user = await getServerUser(request);
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const { searchParams } = new URL(request.url);
         const rawUserId = searchParams.get('userId');
         const rawWorkerId = searchParams.get('workerId');
         const status = searchParams.get('status');
         
-        // UNIVERSAL IDENTITY RESOLUTION: Find all possible aliases (UUID, Slug, Email)
-        const userPool = rawUserId ? await resolveFullIdentity(rawUserId) : null;
-        const workerPool = rawWorkerId ? await resolveFullIdentity(rawWorkerId) : null;
+        // --- IDENTITY RESOLUTION ---
+        // If neither userId nor workerId is provided, we default to the current user's identity
+        const targetUserId = rawUserId || (!rawWorkerId ? user.id : null);
+        const targetWorkerId = rawWorkerId;
 
-        // IDs for Supabase checks
-        const userAliases = [userPool?.uuid, userPool?.slug].filter(Boolean) as string[];
-        const workerAliases = [workerPool?.uuid, workerPool?.slug].filter(Boolean) as string[];
+        const userPool = targetUserId ? await resolveFullIdentity(targetUserId) : null;
+        const workerPool = targetWorkerId ? await resolveFullIdentity(targetWorkerId) : null;
 
         // SECURITY: Verify session and ownership
         const userRole = String(user?.role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdminFromRegistry = userRole === 'admin' || user.email === process.env.ADMIN_EMAIL;
+        
         // Ownership check: session user UUID must match one of the queried pools
-        const isSelf = user?.id && (
-            (userPool?.uuid === user.id) || 
-            (workerPool?.uuid === user.id)
-        );
-        const isFetchingPendingWork = status === 'pending_acceptance';
+        const isSelf = (userPool?.uuid === user.id) || 
+                       (workerPool?.uuid === user.id) ||
+                       (!rawUserId && !rawWorkerId); // Default to self if no specific filter
 
-        if (!user && process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!isAdminFromRegistry && !isSelf) {
+            return NextResponse.json({ error: 'Access Denied: You can only view your own bookings.' }, { status: 403 });
         }
 
-        if (!isAdmin && !isSelf && !isFetchingPendingWork && process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-        const isAdminDebug = isAdmin || (process.env.NODE_ENV === 'development' && (!rawUserId && !rawWorkerId));
-
-        // 1. Fetch from Supabase (Super-Search)
+        // --- 1. SUPABASE SEARCH ---
         let supabaseBookings: Booking[] = [];
         try {
             let query = supabaseAdmin.from('bookings').select('*');
             
-            if (!isAdminDebug) {
-                // Use .in() for multi-alias search
-                if (userAliases.length > 0) query = query.in('user_id', userAliases);
-                if (workerAliases.length > 0) query = query.in('worker_id', workerAliases);
+            // Apply User Filter (UUID only for Supabase)
+            if (targetUserId) {
+                const uuids = [userPool?.uuid].filter(id => id && uuidRegex.test(id)) as string[];
+                if (uuids.length > 0) {
+                    query = query.in('user_id', uuids);
+                } else {
+                    // If we have no valid UUID for the target user, Supabase can't have record (it's a UUID column)
+                    query = query.eq('id', 'none'); 
+                }
             }
+
+            // Apply Worker Filter (UUID only for Supabase)
+            if (targetWorkerId) {
+                const uuids = [workerPool?.uuid].filter(id => id && uuidRegex.test(id)) as string[];
+                if (uuids.length > 0) {
+                    query = query.in('worker_id', uuids);
+                } else {
+                    query = query.eq('id', 'none');
+                }
+            }
+
             if (status) query = query.eq('status', status);
             query = query.order('created_at', { ascending: false });
 
@@ -89,32 +104,30 @@ export async function GET(request: NextRequest) {
                 }));
             }
         } catch (err: any) {
-            console.error(`GET Bookings: Supabase Error: ${err.message}`);
+            console.error(`GET Bookings Supabase Error: ${err.message}`);
         }
 
-        // 2. Fetch from MongoDB (Full Identity Reconciliation)
+        // --- 2. MONGODB SEARCH ---
         let mongoBookings: Booking[] = [];
         try {
             const db = await getDb();
-            const filter: any = {};
+            const mongoFilter: any = {};
             
-            if (!isAdminDebug) {
-                const orConditions: any[] = [];
-                // Check all possible aliases in MongoDB
-                if (userPool) {
-                    if (userPool.uuid) orConditions.push({ userId: userPool.uuid }, { user_id: userPool.uuid });
-                    if (userPool.slug) orConditions.push({ userId: userPool.slug }, { user_id: userPool.slug });
-                    if (userPool.email) orConditions.push({ userId: userPool.email }, { email: userPool.email });
-                }
-                if (workerPool) {
-                    if (workerPool.uuid) orConditions.push({ workerId: workerPool.uuid }, { worker_id: workerPool.uuid }, { helperId: workerPool.uuid });
-                    if (workerPool.slug) orConditions.push({ workerId: workerPool.slug }, { worker_id: workerPool.slug }, { helperId: workerPool.slug });
-                }
-                if (orConditions.length > 0) filter.$or = orConditions;
+            const orConditions: any[] = [];
+            if (userPool) {
+                if (userPool.uuid) orConditions.push({ userId: userPool.uuid }, { user_id: userPool.uuid });
+                if (userPool.slug) orConditions.push({ userId: userPool.slug }, { user_id: userPool.slug });
+                if (userPool.email) orConditions.push({ userId: userPool.email }, { email: userPool.email });
             }
-            if (status) filter.status = status;
+            if (workerPool) {
+                if (workerPool.uuid) orConditions.push({ workerId: workerPool.uuid }, { worker_id: workerPool.uuid }, { helperId: workerPool.uuid });
+                if (workerPool.slug) orConditions.push({ workerId: workerPool.slug }, { worker_id: workerPool.slug }, { helperId: workerPool.slug });
+            }
+
+            if (orConditions.length > 0) mongoFilter.$or = orConditions;
+            if (status) mongoFilter.status = status;
             
-            const results = await db.collection('bookings').find(filter).sort({ createdAt: -1 }).toArray();
+            const results = await db.collection('bookings').find(mongoFilter).sort({ createdAt: -1 }).toArray();
             mongoBookings = results.map(b => ({
                 ...b,
                 userId: b.userId || b.user_id,
@@ -125,10 +138,10 @@ export async function GET(request: NextRequest) {
                 id: b.id || b._id?.toString()
             })) as unknown as Booking[];
         } catch (dbErr: any) {
-            console.error(`GET Bookings: MongoDB Error: ${dbErr.message}`);
+            console.error(`GET Bookings MongoDB Error: ${dbErr.message}`);
         }
 
-        // 3. UNION AND DEDUPLICATE (Total Coverage)
+        // --- 3. DEDUPLICATE & SORT ---
         const combined = [...supabaseBookings, ...mongoBookings];
         const uniqueMap = new Map();
         combined.forEach(b => {
@@ -140,7 +153,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json(finalResults);
     } catch (error: any) {
-        console.error('Bookings API Error:', error);
+        console.error('Bookings API CRITICAL Error:', error);
         return NextResponse.json({ error: 'Failed to fetch bookings', details: error.message }, { status: 500 });
     }
 }

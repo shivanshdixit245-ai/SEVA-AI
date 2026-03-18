@@ -21,7 +21,7 @@ export default function BookingsPage() {
     const [helpers, setHelpers] = useState<Record<string, Helper>>({});
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<'All' | 'Active' | 'History'>('Active');
+    const [filter, setFilter] = useState<'All' | 'Active' | 'History'>('All');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
     const mountedRef = useRef(true);
@@ -102,9 +102,10 @@ export default function BookingsPage() {
 
     const getFilteredBookings = () => {
         return bookings.filter(b => {
+            const status = (b.status || '').toLowerCase();
             if (filter === 'All') return true;
-            if (filter === 'Active') return ['Pending', 'pending_acceptance', 'Confirmed', 'In Progress'].includes(b.status);
-            if (filter === 'History') return ['Completed', 'Cancelled'].includes(b.status);
+            if (filter === 'Active') return ['pending', 'pending_acceptance', 'confirmed', 'in progress', 'in_progress'].includes(status);
+            if (filter === 'History') return ['completed', 'cancelled'].includes(status);
             return true;
         });
     };
