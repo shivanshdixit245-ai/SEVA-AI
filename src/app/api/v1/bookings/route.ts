@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
         
         // --- IDENTITY RESOLUTION ---
         // If neither userId nor workerId is provided, we default to the current user's identity
-        const targetUserId = rawUserId || (!rawWorkerId ? user.id : null);
-        const targetWorkerId = rawWorkerId;
+        let targetUserId = rawUserId || (!rawWorkerId ? user.id : null);
+        let targetWorkerId = rawWorkerId;
 
         const userPoolById = targetUserId ? await resolveFullIdentity(targetUserId) : null;
         // DOUBLE-RESOLUTION: If this is the current user, also resolve by their email to catch disconnected legacy MongoDB records
@@ -75,8 +75,15 @@ export async function GET(request: NextRequest) {
         const userRole = String(user?.role || '').toLowerCase();
         const isAdminFromRegistry = userRole === 'admin' || user.email === process.env.ADMIN_EMAIL;
         
+        // ADMIN UNIVERSAL VISION: If they are admin, reset targets to null so they fetch EVERYTHING
+        if (isAdminFromRegistry) {
+            targetUserId = null;
+            targetWorkerId = null;
+        }
+
         // Ownership check: session user UUID must match one of the queried pools
         const isSelf = (userPool?.uuid === user.id) || 
+                       (userPool?.slug === user.id) || 
                        (userPoolByEmail?.uuid === user.id) ||
                        (workerPool?.uuid === user.id) ||
                        (!rawUserId && !rawWorkerId); // Default to self if no specific filter
@@ -94,7 +101,7 @@ export async function GET(request: NextRequest) {
             
             // Apply User Filter (UUID only for Supabase)
             if (targetUserId) {
-                const uuids = [userPool?.uuid].filter(id => id && uuidRegex.test(id)) as string[];
+                const uuids = [userPool?.uuid, userPoolByEmail?.uuid].filter(id => id && uuidRegex.test(id)) as string[];
                 if (uuids.length > 0) {
                     query = query.in('user_id', uuids);
                 } else {
@@ -148,6 +155,11 @@ export async function GET(request: NextRequest) {
             const mongoFilter: any = {};
             
             const orConditions: any[] = [];
+            
+            // Raw Fallbacks (Critical for surviving arbitrary unlinked IDs like 'guest-user')
+            if (targetUserId) orConditions.push({ userId: targetUserId }, { user_id: targetUserId });
+            if (targetWorkerId) orConditions.push({ workerId: targetWorkerId }, { worker_id: targetWorkerId }, { helperId: targetWorkerId });
+
             if (userPool) {
                 if (userPool.uuid) orConditions.push({ userId: userPool.uuid }, { user_id: userPool.uuid });
                 if (userPool.slug) orConditions.push({ userId: userPool.slug }, { user_id: userPool.slug });
@@ -158,7 +170,7 @@ export async function GET(request: NextRequest) {
                 if (workerPool.slug) orConditions.push({ workerId: workerPool.slug }, { worker_id: workerPool.slug }, { helperId: workerPool.slug });
             }
 
-            if (orConditions.length > 0) mongoFilter.$or = orConditions;
+            if (orConditions.length > 0 && !isAdminFromRegistry) mongoFilter.$or = orConditions;
             if (status) mongoFilter.status = status;
             
             const results = await db.collection('bookings').find(mongoFilter).sort({ createdAt: -1 }).toArray();
