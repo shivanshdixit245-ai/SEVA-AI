@@ -126,10 +126,28 @@ export default function WorkerChatsPage() {
     const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
     const [realtimeError, setRealtimeError] = useState<string | null>(null);
     const [retryCount, setRetryCount] = useState(0);
+    const [isAuthSynced, setIsAuthSynced] = useState(false);
 
-    // Realtime Database & Broadcast listener
+    // 1. Sync check: Ensure Supabase client is actually authenticated before subscribing
     useEffect(() => {
-        if (!user || !selectedThread) return;
+        supabase.auth.getSession().then(({ data }) => {
+            if (data.session) setIsAuthSynced(true);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (session) setIsAuthSynced(true);
+            else setIsAuthSynced(false);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    // 2. Realtime Database & Broadcast listener
+    useEffect(() => {
+        if (!user || !selectedThread || !isAuthSynced) {
+            console.log('[REALTIME DEBUG] Worker waiting for auth sync...', { user: !!user, isAuthSynced });
+            return;
+        }
         
         const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
         const safeUserId = String(user.id).toLowerCase().trim();
@@ -144,18 +162,16 @@ export default function WorkerChatsPage() {
         const sortedIds = [safeUserId, finalClientId].sort();
         const roomChannelName = `room:${sortedIds[0]}-${sortedIds[1]}`;
 
-        console.log(`[REALTIME DEBUG] Worker joining bulletproof room (Attempt ${retryCount + 1}): ${roomChannelName}`);
+        console.log(`[REALTIME DEBUG] Worker joining AUTH-READY room: ${roomChannelName} (Attempt ${retryCount + 1})`);
         setRealtimeStatus('connecting');
         setRealtimeError(null);
 
-        // Self-healing timeout
         const timeout = setTimeout(() => {
             if (realtimeStatus === 'connecting') {
-                console.warn('[REALTIME] Worker connection timeout...');
                 setRealtimeStatus('error');
                 setRealtimeError('TIMEOUT');
             }
-        }, 8000);
+        }, 10000);
 
         // Listen for new messages where the worker is the receiver
         const channel = supabase
@@ -222,7 +238,7 @@ export default function WorkerChatsPage() {
             supabase.removeChannel(channel);
             channelRef.current = null;
         };
-    }, [user, selectedThread, retryCount]);
+    }, [user, selectedThread, retryCount, isAuthSynced]);
 
     const fetchMessages = async (clientId: string) => {
         if (!user) return;
@@ -398,8 +414,17 @@ export default function WorkerChatsPage() {
                                 realtimeStatus === 'error' ? 'text-red-500' : 'text-white/20'
                             }`}>
                                 {realtimeStatus === 'connected' ? 'Live' : 
-                                 realtimeStatus === 'error' ? `Error (${realtimeError || 'Failed'})` : 'Syncing'}
+                                 realtimeStatus === 'error' ? `Error (${realtimeError || 'Failed'})` : 
+                                 !isAuthSynced ? 'Authenticating' : 'Syncing'}
                             </span>
+                            {realtimeStatus === 'connected' && (
+                                <span 
+                                    className="text-[10px] text-white/20 font-mono border border-white/5 px-1 rounded ml-1" 
+                                    title="Room Hash: Verify this code matches the client's screen."
+                                >
+                                    #{ user ? [user.id, selectedThread.clientId].sort().join('').substring(0,4) : '...' }
+                                </span>
+                            )}
                             {realtimeStatus === 'error' && (
                                 <button 
                                     onClick={() => setRetryCount(prev => prev + 1)}

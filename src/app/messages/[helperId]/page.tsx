@@ -146,10 +146,29 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
     const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
     const [realtimeError, setRealtimeError] = useState<string | null>(null);
     const [retryCount, setRetryCount] = useState(0);
+    const [isAuthSynced, setIsAuthSynced] = useState(false);
 
-    // Realtime Database & Broadcast listener
+    // 1. Sync check: Ensure Supabase client is actually authenticated before subscribing
     useEffect(() => {
-        if (!user) return;
+        supabase.auth.getSession().then(({ data }) => {
+            if (data.session) setIsAuthSynced(true);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log(`[REALTIME AUTH] Event: ${event}, Session: ${!!session}`);
+            if (session) setIsAuthSynced(true);
+            else setIsAuthSynced(false);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    // 2. Realtime Database & Broadcast listener
+    useEffect(() => {
+        if (!user || !isAuthSynced) {
+            console.log('[REALTIME DEBUG] Waiting for auth sync...', { user: !!user, isAuthSynced });
+            return;
+        }
 
         const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
         const safeUserId = String(user.id).toLowerCase().trim();
@@ -164,18 +183,16 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
         const sortedIds = [safeUserId, finalPeerId].sort();
         const roomChannelName = `room:${sortedIds[0]}-${sortedIds[1]}`;
         
-        console.log(`[REALTIME DEBUG] Client joining bulletproof room (Attempt ${retryCount + 1}): ${roomChannelName}`);
+        console.log(`[REALTIME DEBUG] Client joining AUTH-READY room: ${roomChannelName} (Attempt ${retryCount + 1})`);
         setRealtimeStatus('connecting');
         setRealtimeError(null);
 
-        // Self-healing timeout: If not connected in 8 seconds, retry
         const timeout = setTimeout(() => {
             if (realtimeStatus === 'connecting') {
-                console.warn('[REALTIME] Connection timeout, retrying...');
                 setRealtimeStatus('error');
                 setRealtimeError('TIMEOUT');
             }
-        }, 8000);
+        }, 10000);
 
         const channel = supabase
             .channel(roomChannelName)
@@ -225,7 +242,6 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
             .subscribe((status, err) => {
                 console.log(`[REALTIME DEBUG] Client status [${status}]:`, err || '');
                 clearTimeout(timeout);
-                
                 if (status === 'SUBSCRIBED') {
                     setRealtimeStatus('connected');
                     setRealtimeError(null);
@@ -241,7 +257,7 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
             supabase.removeChannel(channel);
             channelRef.current = null;
         };
-    }, [user, helper, helperId, retryCount]);
+    }, [user, helper, helperId, retryCount, isAuthSynced]);
 
     useEffect(() => {
         scrollToBottom();
@@ -393,8 +409,17 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
                                             realtimeStatus === 'error' ? "text-red-400" : "text-white/40"
                                         )}>
                                             {realtimeStatus === 'connected' ? 'Live' : 
-                                             realtimeStatus === 'error' ? `Error (${realtimeError || 'Connect Failed'})` : 'Syncing...'}
+                                             realtimeStatus === 'error' ? `Error (${realtimeError || 'Connect Failed'})` : 
+                                             !isAuthSynced ? 'Authenticating...' : 'Syncing...'}
                                         </span>
+                                        {realtimeStatus === 'connected' && (
+                                            <span 
+                                                className="text-[9px] text-white/20 font-mono border border-white/5 px-1 rounded ml-1" 
+                                                title="Room Hash: Use this to verify you are in the same room as the helper."
+                                            >
+                                                #{ (helper?.supabaseId && user?.id) ? [user.id, helper.supabaseId].sort().join('').substring(0,4) : '...' }
+                                            </span>
+                                        )}
                                         {realtimeStatus === 'error' && (
                                             <button 
                                                 onClick={() => setRetryCount(prev => prev + 1)}
