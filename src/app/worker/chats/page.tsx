@@ -124,14 +124,14 @@ export default function WorkerChatsPage() {
     });
 
     const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+    const [realtimeError, setRealtimeError] = useState<string | null>(null);
+    const [retryCount, setRetryCount] = useState(0);
 
     // Realtime Database & Broadcast listener
     useEffect(() => {
         if (!user || !selectedThread) return;
         
         const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
-        
-        // Normalize IDs to prevent "hidden" mismatches
         const safeUserId = String(user.id).toLowerCase().trim();
         let resolvedClientId = isUUID(selectedThread.clientId) ? selectedThread.clientId : null;
 
@@ -144,13 +144,22 @@ export default function WorkerChatsPage() {
         const sortedIds = [safeUserId, finalClientId].sort();
         const roomChannelName = `room:${sortedIds[0]}-${sortedIds[1]}`;
 
-        console.log(`[REALTIME DEBUG] Worker joining bulletproof room: ${roomChannelName}`);
+        console.log(`[REALTIME DEBUG] Worker joining bulletproof room (Attempt ${retryCount + 1}): ${roomChannelName}`);
         setRealtimeStatus('connecting');
+        setRealtimeError(null);
+
+        // Self-healing timeout
+        const timeout = setTimeout(() => {
+            if (realtimeStatus === 'connecting') {
+                console.warn('[REALTIME] Worker connection timeout...');
+                setRealtimeStatus('error');
+                setRealtimeError('TIMEOUT');
+            }
+        }, 8000);
 
         // Listen for new messages where the worker is the receiver
         const channel = supabase
             .channel(roomChannelName)
-            // 1. Listen for Instant Broadcasts
             .on('broadcast', { event: 'dm-receive' }, (payload) => {
                 const msg = payload.payload as any;
                 if (String(msg.senderId).toLowerCase().trim() === finalClientId) {
@@ -166,13 +175,11 @@ export default function WorkerChatsPage() {
                     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
                 }
             })
-            // 2. Listen for Typing Indicators
             .on('broadcast', { event: 'typing' }, (payload) => {
                 if (String(payload.payload.senderId).toLowerCase().trim() !== safeUserId) {
                     setIsTyping(payload.payload.isTyping);
                 }
             })
-            // 3. Listen for Database Changes
             .on(
                 'postgres_changes',
                 {
@@ -183,8 +190,6 @@ export default function WorkerChatsPage() {
                 },
                 (payload) => {
                     const record = payload.new as any;
-                    console.log('[REALTIME DB] Worker received change:', record);
-                    
                     if (String(record.sender_id).toLowerCase().trim() === finalClientId) {
                         setMessages(prev => {
                             if (prev.find(m => m.id === record.id)) return prev;
@@ -199,22 +204,25 @@ export default function WorkerChatsPage() {
                     }
                 }
             )
-            .subscribe((status) => {
-                console.log(`[REALTIME DEBUG] Worker status [${roomChannelName}]:`, status);
+            .subscribe((status, err) => {
+                console.log(`[REALTIME DEBUG] Worker status [${status}]:`, err || '');
+                clearTimeout(timeout);
                 if (status === 'SUBSCRIBED') {
                     setRealtimeStatus('connected');
+                    setRealtimeError(null);
                     channelRef.current = channel;
-                } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+                } else {
                     setRealtimeStatus('error');
+                    setRealtimeError(status);
                 }
             });
 
         return () => { 
-            console.log('[REALTIME DEBUG] Worker exiting room');
+            clearTimeout(timeout);
             supabase.removeChannel(channel);
             channelRef.current = null;
         };
-    }, [user, selectedThread]);
+    }, [user, selectedThread, retryCount]);
 
     const fetchMessages = async (clientId: string) => {
         if (!user) return;
@@ -383,13 +391,23 @@ export default function WorkerChatsPage() {
                                     realtimeStatus === 'connected' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' :
                                     realtimeStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500'
                                 }`}
-                                title={`Real-time: ${realtimeStatus}`}
+                                title={`Real-time: ${realtimeStatus} ${realtimeError || ''}`}
                             />
                             <span className={`text-[10px] uppercase tracking-tighter font-bold ${
-                                realtimeStatus === 'connected' ? 'text-green-500' : 'text-white/20'
+                                realtimeStatus === 'connected' ? 'text-green-500' : 
+                                realtimeStatus === 'error' ? 'text-red-500' : 'text-white/20'
                             }`}>
-                                {realtimeStatus === 'connected' ? 'Live' : 'Syncing'}
+                                {realtimeStatus === 'connected' ? 'Live' : 
+                                 realtimeStatus === 'error' ? `Error (${realtimeError || 'Failed'})` : 'Syncing'}
                             </span>
+                            {realtimeStatus === 'error' && (
+                                <button 
+                                    onClick={() => setRetryCount(prev => prev + 1)}
+                                    className="text-[10px] bg-white/10 hover:bg-white/20 px-1 py-0.5 rounded text-white transition-colors"
+                                >
+                                    Retry
+                                </button>
+                            )}
                         </div>
                         <p className="text-xs text-white/40">{selectedThread.serviceType} • {selectedThread.bookingId}</p>
                     </div>

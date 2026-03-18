@@ -144,14 +144,14 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
     }, [user, helperId, fetchHelper, fetchMessages]);
 
     const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+    const [realtimeError, setRealtimeError] = useState<string | null>(null);
+    const [retryCount, setRetryCount] = useState(0);
 
     // Realtime Database & Broadcast listener
     useEffect(() => {
         if (!user) return;
 
         const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
-        
-        // Normalize IDs to prevent "hidden" mismatches (lowercase + trimmed)
         const safeUserId = String(user.id).toLowerCase().trim();
         let resolvedPeerId = helper?.supabaseId || (isUUID(helperId) ? helperId : null);
         
@@ -161,20 +161,26 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
         }
 
         const finalPeerId = String(resolvedPeerId || helperId).toLowerCase().trim();
-        
-        // UNIQUE SHARED ROOM: Forced lowercase pairing
         const sortedIds = [safeUserId, finalPeerId].sort();
         const roomChannelName = `room:${sortedIds[0]}-${sortedIds[1]}`;
         
-        console.log(`[REALTIME DEBUG] Client joining bulletproof room: ${roomChannelName}`);
+        console.log(`[REALTIME DEBUG] Client joining bulletproof room (Attempt ${retryCount + 1}): ${roomChannelName}`);
         setRealtimeStatus('connecting');
+        setRealtimeError(null);
+
+        // Self-healing timeout: If not connected in 8 seconds, retry
+        const timeout = setTimeout(() => {
+            if (realtimeStatus === 'connecting') {
+                console.warn('[REALTIME] Connection timeout, retrying...');
+                setRealtimeStatus('error');
+                setRealtimeError('TIMEOUT');
+            }
+        }, 8000);
 
         const channel = supabase
             .channel(roomChannelName)
-            // 1. Listen for Instant Broadcasts
             .on('broadcast', { event: 'dm-receive' }, (payload) => {
                 const msg = payload.payload as DirectMessage;
-                // Double-normalize check for broadcast filter
                 if (String(msg.senderId).toLowerCase().trim() === finalPeerId) {
                     setMessages(prev => {
                         if (prev.find(m => m.id === msg.id)) return prev;
@@ -183,13 +189,11 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
                     setTimeout(() => scrollToBottom(true), 10);
                 }
             })
-            // 2. Listen for Typing Indicators
             .on('broadcast', { event: 'typing' }, (payload) => {
                 if (String(payload.payload.senderId).toLowerCase().trim() !== safeUserId) {
                     setIsTyping(payload.payload.isTyping);
                 }
             })
-            // 3. Listen for Database Changes
             .on(
                 'postgres_changes',
                 {
@@ -200,8 +204,6 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
                 },
                 (payload) => {
                     const record = payload.new as any;
-                    console.log('[REALTIME DB] Change received:', record);
-
                     if (String(record.sender_id).toLowerCase().trim() === finalPeerId) {
                         const newMsg: DirectMessage = {
                             id: record.id,
@@ -212,7 +214,6 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
                             bookingId: record.booking_id,
                             isRead: record.is_read
                         };
-
                         setMessages(prev => {
                             if (prev.find(m => m.id === newMsg.id)) return prev;
                             return [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
@@ -221,22 +222,26 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
                     }
                 }
             )
-            .subscribe((status) => {
-                console.log(`[REALTIME DEBUG] Client status [${roomChannelName}]:`, status);
+            .subscribe((status, err) => {
+                console.log(`[REALTIME DEBUG] Client status [${status}]:`, err || '');
+                clearTimeout(timeout);
+                
                 if (status === 'SUBSCRIBED') {
                     setRealtimeStatus('connected');
+                    setRealtimeError(null);
                     channelRef.current = channel;
-                } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+                } else {
                     setRealtimeStatus('error');
+                    setRealtimeError(status);
                 }
             });
 
         return () => {
-            console.log('[REALTIME DEBUG] Client exiting room');
+            clearTimeout(timeout);
             supabase.removeChannel(channel);
             channelRef.current = null;
         };
-    }, [user, helper, helperId]);
+    }, [user, helper, helperId, retryCount]);
 
     useEffect(() => {
         scrollToBottom();
@@ -380,14 +385,24 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
                                                 realtimeStatus === 'connected' ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : 
                                                 realtimeStatus === 'connecting' ? "bg-yellow-500 animate-pulse" : "bg-red-500"
                                             )} 
-                                            title={`Real-time: ${realtimeStatus}`}
+                                            title={`Real-time: ${realtimeStatus} ${realtimeError || ''}`}
                                         />
                                         <span className={clsx(
                                             "font-medium",
-                                            realtimeStatus === 'connected' ? "text-green-400" : "text-white/40"
+                                            realtimeStatus === 'connected' ? "text-green-400" : 
+                                            realtimeStatus === 'error' ? "text-red-400" : "text-white/40"
                                         )}>
-                                            {realtimeStatus === 'connected' ? 'Live' : 'Syncing...'}
+                                            {realtimeStatus === 'connected' ? 'Live' : 
+                                             realtimeStatus === 'error' ? `Error (${realtimeError || 'Connect Failed'})` : 'Syncing...'}
                                         </span>
+                                        {realtimeStatus === 'error' && (
+                                            <button 
+                                                onClick={() => setRetryCount(prev => prev + 1)}
+                                                className="ml-1 text-[10px] bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded text-white transition-colors"
+                                            >
+                                                Retry
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>
