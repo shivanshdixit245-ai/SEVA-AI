@@ -42,14 +42,39 @@ export async function GET(request: NextRequest) {
             return NextResponse.json(messagesCache[cacheKey].data);
         }
 
+        // 1. Fetch from Supabase (New Source of Truth)
+        let supabaseMessages: DirectMessage[] = [];
+        try {
+            const { data, error: sErr } = await supabaseAdmin
+                .from('messages')
+                .select('*')
+                .or(`and(sender_id.eq.${userId},receiver_id.eq.${helperId}),and(sender_id.eq.${helperId},receiver_id.eq.${userId})`)
+                .order('created_at', { ascending: true });
+            
+            if (data && !sErr) {
+                supabaseMessages = data.map((m: any) => ({
+                    id: m.id,
+                    senderId: m.sender_id,
+                    receiverId: m.receiver_id,
+                    content: m.content,
+                    timestamp: new Date(m.created_at).getTime(),
+                    bookingId: m.booking_id,
+                    isRead: m.is_read
+                }));
+            }
+        } catch (err) {
+            console.error('GET Messages: Supabase Fetch FAILED:', err);
+        }
+
+        // 2. Fetch from MongoDB (Legacy/Backup)
+        let mongoMessages: DirectMessage[] = [];
         const db = await getDb().catch(err => {
             console.error('GET Messages: MongoDB connection failed:', err.message);
             return null;
         });
 
-        let cloudMessages: DirectMessage[] = [];
         if (db) {
-            cloudMessages = await db.collection('messages')
+            mongoMessages = await db.collection('messages')
                 .find({
                     $or: [
                         { senderId: userId, receiverId: helperId },
@@ -60,9 +85,10 @@ export async function GET(request: NextRequest) {
                 .toArray() as unknown as DirectMessage[];
         }
         
-        // Sort by timestamp and remove duplicates
-        const uniqueMessages = Array.from(new Map(cloudMessages.map(m => [m.id, m])).values());
-        const sortedMessages = uniqueMessages.sort((a, b) => a.timestamp - b.timestamp);
+        // 3. Union and Sort (Deduplicate by ID)
+        const allMessages = [...mongoMessages, ...supabaseMessages];
+        const uniqueMessages = Array.from(new Map(allMessages.map(m => [m.id, m])).values());
+        const sortedMessages = uniqueMessages.sort((a: DirectMessage, b: DirectMessage) => a.timestamp - b.timestamp);
 
         // Update Cache
         messagesCache[cacheKey] = { data: sortedMessages, timestamp: now };
@@ -113,7 +139,7 @@ export async function POST(request: NextRequest) {
             isRead: false
         };
 
-        // 1. ATOMIC SAVE: Save to MongoDB for history (Sequential Await)
+        // 1. PERSISTENCE: Save to Supabase (Primary) and MongoDB (Backup)
         let mongoSuccess = false;
         try {
             const db = await getDb();
@@ -123,38 +149,28 @@ export async function POST(request: NextRequest) {
             console.error('POST Message: MongoDB Save FAILED:', err.message);
         }
 
-        if (!mongoSuccess) {
-            return NextResponse.json({ error: 'Failed to persist message.' }, { status: 500 });
-        }
-
-        // 2. BROADCAST: Broadcast via Supabase for real-time
+        // Supabase Save (This triggers Postgres Realtime)
         try {
-            const safeSenderId = String(senderId).toLowerCase().trim();
-            const safeReceiverId = String(receiverId).toLowerCase().trim();
-            const channelName = `dm-${[safeSenderId, safeReceiverId].sort().join('-')}`;
-            
-            console.log(`[API REALTIME] Constructing channel: ${channelName}`);
-            
-            const channel = supabaseAdmin.channel(channelName);
-            const broadcastStatus = await channel.send({
-                type: 'broadcast',
-                event: 'dm-receive',
-                payload: newMessage,
-            });
-            
-            console.log(`[API REALTIME] Broadcast Result for ${channelName}:`, broadcastStatus);
-            
-            // Broadcast to the global user channel for notifications
-            const globalChannel = `user-${safeReceiverId}`;
-            await supabaseAdmin
-                .channel(globalChannel)
-                .send({
-                    type: 'broadcast',
-                    event: 'global-message',
-                    payload: newMessage,
+            const { error: supabaseError } = await supabaseAdmin
+                .from('messages')
+                .insert({
+                    id: newMessage.id,
+                    sender_id: newMessage.senderId,
+                    receiver_id: newMessage.receiverId,
+                    content: newMessage.content,
+                    booking_id: newMessage.bookingId,
+                    is_read: false,
+                    created_at: new Date(newMessage.timestamp).toISOString()
                 });
-        } catch (bsErr: any) {
-            console.error('[API BROADCAST ERROR]', bsErr);
+
+            if (supabaseError) {
+                console.error('POST Message: Supabase Save FAILED:', supabaseError.message);
+                if (!mongoSuccess) {
+                    return NextResponse.json({ error: 'Failed to persist message to any database.' }, { status: 500 });
+                }
+            }
+        } catch (err: any) {
+            console.error('POST Message: Supabase Save Exception:', err.message);
         }
 
         return NextResponse.json(newMessage);

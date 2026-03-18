@@ -138,22 +138,41 @@ export default function NotificationBell() {
     useEffect(() => {
         if (!user) return;
 
-        const channel = supabase.channel(`user-${user.id}`)
-            .on('broadcast', { event: 'global-message' }, ({ payload }) => {
-                const m = payload as any;
-                const newNotif: NotificationItem = {
-                    id: `m-${m.id}`,
-                    type: 'message',
-                    title: 'New Message',
-                    content: m.content,
-                    timestamp: new Date(m.timestamp).toISOString(),
-                    link: user.role === 'worker' ? '/worker/chats' : `/messages/${m.senderId}`,
-                    read: false
-                };
-                setNotifications(prev => [newNotif, ...prev].slice(0, 15));
-                setUnreadCount(prev => prev + 1);
-            })
-            .subscribe();
+        // Listen for new messages across all conversations for this user
+        const channel = supabase
+            .channel(`public:messages:notif-${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `receiver_id=eq.${user.id}`
+                },
+                (payload) => {
+                    const m = payload.new as any;
+                    console.log('[REALTIME DEBUG] NotificationBell received DB change:', m);
+                    
+                    const newNotif: NotificationItem = {
+                        id: `m-${m.id}`,
+                        type: 'message',
+                        title: 'New Message',
+                        content: m.content,
+                        timestamp: m.created_at,
+                        link: user.role === 'worker' ? '/worker/chats' : `/messages/${m.sender_id}`,
+                        read: false
+                    };
+                    
+                    setNotifications(prev => {
+                        if (prev.find(n => n.id === newNotif.id)) return prev;
+                        return [newNotif, ...prev].slice(0, 15);
+                    });
+                    setUnreadCount(prev => prev + 1);
+                }
+            )
+            .subscribe((status) => {
+                console.log(`[REALTIME DEBUG] NotificationBell DB Subscription:`, status);
+            });
 
         return () => {
             supabase.removeChannel(channel);

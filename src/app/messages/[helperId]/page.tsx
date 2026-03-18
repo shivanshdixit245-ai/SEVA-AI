@@ -143,62 +143,65 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
         };
     }, [user, helperId, fetchHelper, fetchMessages]);
 
-    // Realtime Broadcast listener for messages
+    // Realtime Database listener for new messages
     useEffect(() => {
         if (!user) return;
 
-        // CRITICAL FIX: Ensure we use the verified UUID for the channel name.
         const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
-        
         let resolvedPeerId = helper?.supabaseId || (isUUID(helperId) ? helperId : null);
         
-        // If the URL has a slug and we haven't loaded the profile yet, wait.
         if (!resolvedPeerId && !isUUID(helperId)) {
-            console.log('[REALTIME DEBUG] Delaying channel join until Peer UUID is resolved...');
+            console.log('[REALTIME DEBUG] Delaying DB subscribe until Peer UUID is resolved...');
             return;
         }
 
         const finalPeerId = resolvedPeerId || helperId;
-        const safeClientId = String(user.id).toLowerCase().trim();
-        const safeHelperId = String(finalPeerId).toLowerCase().trim();
-        const channelName = `dm-${[safeClientId, safeHelperId].sort().join('-')}`;
         
-        console.log(`[REALTIME DEBUG] Client joining ${channelName} with Peer ID: ${safeHelperId}`);
-        
-        const channel = supabase.channel(channelName, {
-            config: {
-                broadcast: { self: false }
-            }
-        })
-            .on('broadcast', { event: 'dm-receive' }, ({ payload }) => {
-                const record = payload as DirectMessage;
-                console.log('[REALTIME DEBUG] Client received broadcast:', record);
+        // Listen for new messages inserted into the database
+        const channel = supabase
+            .channel(`public:messages:dm-${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `receiver_id=eq.${user.id}`
+                },
+                (payload) => {
+                    const record = payload.new as any;
+                    console.log('[REALTIME DEBUG] Client received DB change:', record);
 
-                if (record.senderId === user.id) return;
+                    // Check if this message is from the correct peer
+                    if (record.sender_id === finalPeerId) {
+                        const newMsg: DirectMessage = {
+                            id: record.id,
+                            senderId: record.sender_id,
+                            receiverId: record.receiver_id,
+                            content: record.content,
+                            timestamp: new Date(record.created_at).getTime(),
+                            bookingId: record.booking_id,
+                            isRead: record.is_read
+                        };
 
-                setMessages(prev => {
-                    if (prev.find(m => m.id === record.id)) return prev;
-                    return [...prev, record];
-                });
-                setTimeout(() => scrollToBottom(true), 10);
-            })
-            .on('broadcast', { event: 'typing' }, ({ payload }) => {
-                if (payload.senderId === finalPeerId) {
-                    setIsTyping(payload.isTyping);
-                    if (payload.isTyping) {
-                        setTimeout(scrollToBottom, 50);
+                        setMessages(prev => {
+                            if (prev.find(m => m.id === newMsg.id)) return prev;
+                            const updated = [...prev, newMsg];
+                            return updated.sort((a, b) => a.timestamp - b.timestamp);
+                        });
+                        setTimeout(() => scrollToBottom(true), 10);
                     }
                 }
-            })
+            )
             .subscribe((status) => {
-                console.log(`[REALTIME DEBUG] Client Sub Status [${channelName}]:`, status);
+                console.log(`[REALTIME DEBUG] Client DB Subscription [public:messages:dm-${user.id}]:`, status);
                 if (status === 'SUBSCRIBED') {
                     channelRef.current = channel;
                 }
             });
 
         return () => {
-            console.log(`[REALTIME DEBUG] Client unsubscribing from: ${channelName}`);
+            console.log('[REALTIME DEBUG] Client unsubscribing from DB changes');
             supabase.removeChannel(channel);
             channelRef.current = null;
         };

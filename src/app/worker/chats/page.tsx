@@ -123,69 +123,59 @@ export default function WorkerChatsPage() {
         enabled: !!user
     });
 
-    // Realtime for messages (using Broadcast channels as 'messages' table isn't in Supabase)
+    // Realtime Database listener for new messages
     useEffect(() => {
         if (!user || !selectedThread) return;
         
         const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
         
-        // Ensure we always join using a UUID for the Peer
+        // Ensure we always use a UUID for the Peer
         let resolvedClientId = isUUID(selectedThread.clientId) ? selectedThread.clientId : null;
 
-        // If not a UUID, we must wait or the broadcast will fail to sync with the client.
         if (!resolvedClientId) {
-            console.log('[REALTIME DEBUG] Worker delaying channel join until Client UUID is verified...');
-            // We can try to fetch the profile to get the UUID if needed, 
-            // but for now we'll just wait for the selectThread logic to potentially handle it.
+            console.log('[REALTIME DEBUG] Worker delaying DB subscribe until Client UUID is verified...');
             return;
         }
 
-        const safeWorkerId = String(user.id).toLowerCase().trim();
-        const safeClientId = String(resolvedClientId).toLowerCase().trim();
-        const channelName = `dm-${[safeWorkerId, safeClientId].sort().join('-')}`;
-        
-        console.log(`[REALTIME DEBUG] Worker joining ${channelName} with Peer ID: ${safeClientId}`);
-
-        const channel = supabase.channel(channelName, {
-            config: {
-                broadcast: { self: false }
-            }
-        })
-            .on('broadcast', { event: 'dm-receive' }, ({ payload }) => {
-                const record = payload as any;
-                console.log('[REALTIME DEBUG] Worker received broadcast:', record);
-                
-                // IGNORE our own messages that come back from the API broadcast
-                if (record.senderId === user.id) return;
-                
-                setMessages(prev => {
-                    if (prev.find(m => m.id === record.id)) return prev;
-                    return [...prev, {
-                        id: record.id,
-                        text: record.content || record.text,
-                        sender: record.senderId === user.id ? 'worker' : 'client',
-                        timestamp: new Date(record.timestamp).toISOString()
-                    }];
-                });
-                setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
-            })
-            .on('broadcast', { event: 'typing' }, ({ payload }) => {
-                if (payload.senderId === resolvedClientId) {
-                    setIsTyping(payload.isTyping);
-                    if (payload.isTyping) {
-                        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+        // Listen for new messages where the worker is the receiver
+        const channel = supabase
+            .channel(`public:messages:worker-${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `receiver_id=eq.${user.id}`
+                },
+                (payload) => {
+                    const record = payload.new as any;
+                    console.log('[REALTIME DEBUG] Worker received DB change:', record);
+                    
+                    // Check if this message is from the currently active client
+                    if (record.sender_id === resolvedClientId) {
+                        setMessages(prev => {
+                            if (prev.find(m => m.id === record.id)) return prev;
+                            return [...prev, {
+                                id: record.id,
+                                text: record.content,
+                                sender: 'client',
+                                timestamp: record.created_at
+                            }];
+                        });
+                        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
                     }
                 }
-            })
+            )
             .subscribe((status) => {
-                console.log(`[REALTIME DEBUG] Worker Sub Status [${channelName}]:`, status);
+                console.log(`[REALTIME DEBUG] Worker DB Subscription [public:messages:worker-${user.id}]:`, status);
                 if (status === 'SUBSCRIBED') {
                     channelRef.current = channel;
                 }
             });
 
         return () => { 
-            console.log(`[REALTIME DEBUG] Worker unsubscribing from: ${channelName}`);
+            console.log('[REALTIME DEBUG] Worker unsubscribing from DB changes');
             supabase.removeChannel(channel);
             channelRef.current = null;
         };
