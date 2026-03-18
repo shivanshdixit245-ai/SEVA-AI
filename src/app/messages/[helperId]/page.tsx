@@ -143,59 +143,66 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
         };
     }, [user, helperId, fetchHelper, fetchMessages]);
 
+    const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+
     // Realtime Database & Broadcast listener
     useEffect(() => {
         if (!user) return;
 
-        const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+        const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+        
+        // Normalize IDs to prevent "hidden" mismatches (lowercase + trimmed)
+        const safeUserId = String(user.id).toLowerCase().trim();
         let resolvedPeerId = helper?.supabaseId || (isUUID(helperId) ? helperId : null);
         
         if (!resolvedPeerId && !isUUID(helperId)) {
-            console.log('[REALTIME DEBUG] Delaying shared room subscribe until Peer UUID is resolved...');
+            console.log('[REALTIME DEBUG] Waiting for Peer UUID resolution...');
             return;
         }
 
-        const finalPeerId = resolvedPeerId || helperId;
+        const finalPeerId = String(resolvedPeerId || helperId).toLowerCase().trim();
         
-        // UNIQUE SHARED ROOM: Both parties must join the EXACT same channel name for broadcast to work
-        const sortedIds = [user.id, finalPeerId].sort();
+        // UNIQUE SHARED ROOM: Forced lowercase pairing
+        const sortedIds = [safeUserId, finalPeerId].sort();
         const roomChannelName = `room:${sortedIds[0]}-${sortedIds[1]}`;
         
-        console.log(`[REALTIME DEBUG] Client joining shared room: ${roomChannelName}`);
+        console.log(`[REALTIME DEBUG] Client joining bulletproof room: ${roomChannelName}`);
+        setRealtimeStatus('connecting');
 
         const channel = supabase
             .channel(roomChannelName)
-            // 1. Listen for Instant Broadcasts (Fast)
+            // 1. Listen for Instant Broadcasts
             .on('broadcast', { event: 'dm-receive' }, (payload) => {
                 const msg = payload.payload as DirectMessage;
-                console.log('[REALTIME DEBUG] Client received broadcast:', msg);
-                setMessages(prev => {
-                    if (prev.find(m => m.id === msg.id)) return prev;
-                    const updated = [...prev, msg];
-                    return updated.sort((a, b) => a.timestamp - b.timestamp);
-                });
-                setTimeout(() => scrollToBottom(true), 10);
+                // Double-normalize check for broadcast filter
+                if (String(msg.senderId).toLowerCase().trim() === finalPeerId) {
+                    setMessages(prev => {
+                        if (prev.find(m => m.id === msg.id)) return prev;
+                        return [...prev, msg].sort((a, b) => a.timestamp - b.timestamp);
+                    });
+                    setTimeout(() => scrollToBottom(true), 10);
+                }
             })
             // 2. Listen for Typing Indicators
             .on('broadcast', { event: 'typing' }, (payload) => {
-                if (payload.payload.senderId !== user.id) {
+                if (String(payload.payload.senderId).toLowerCase().trim() !== safeUserId) {
                     setIsTyping(payload.payload.isTyping);
                 }
             })
-            // 3. Listen for Database Changes (Robust)
+            // 3. Listen for Database Changes
             .on(
                 'postgres_changes',
                 {
                     event: 'INSERT',
                     schema: 'public',
                     table: 'messages',
-                    filter: `receiver_id=eq.${user.id}`
+                    filter: `receiver_id=eq.${safeUserId}`
                 },
                 (payload) => {
                     const record = payload.new as any;
-                    console.log('[REALTIME DEBUG] Client received DB change:', record);
+                    console.log('[REALTIME DB] Change received:', record);
 
-                    if (record.sender_id === finalPeerId) {
+                    if (String(record.sender_id).toLowerCase().trim() === finalPeerId) {
                         const newMsg: DirectMessage = {
                             id: record.id,
                             senderId: record.sender_id,
@@ -208,22 +215,24 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
 
                         setMessages(prev => {
                             if (prev.find(m => m.id === newMsg.id)) return prev;
-                            const updated = [...prev, newMsg];
-                            return updated.sort((a, b) => a.timestamp - b.timestamp);
+                            return [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
                         });
                         setTimeout(() => scrollToBottom(true), 10);
                     }
                 }
             )
             .subscribe((status) => {
-                console.log(`[REALTIME DEBUG] Client Room Subscription [${roomChannelName}]:`, status);
+                console.log(`[REALTIME DEBUG] Client status [${roomChannelName}]:`, status);
                 if (status === 'SUBSCRIBED') {
+                    setRealtimeStatus('connected');
                     channelRef.current = channel;
+                } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+                    setRealtimeStatus('error');
                 }
             });
 
         return () => {
-            console.log('[REALTIME DEBUG] Client leaving shared room');
+            console.log('[REALTIME DEBUG] Client exiting room');
             supabase.removeChannel(channel);
             channelRef.current = null;
         };
@@ -364,7 +373,22 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
                                 <div className="flex items-center gap-2 text-xs text-white/40">
                                     <span className="flex items-center gap-1"><Star size={10} className="text-yellow-400 fill-yellow-400" /> {helper.rating}</span>
                                     <span>•</span>
-                                    <span className="text-green-400 font-medium">Online</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <div 
+                                            className={clsx(
+                                                "w-2 h-2 rounded-full",
+                                                realtimeStatus === 'connected' ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : 
+                                                realtimeStatus === 'connecting' ? "bg-yellow-500 animate-pulse" : "bg-red-500"
+                                            )} 
+                                            title={`Real-time: ${realtimeStatus}`}
+                                        />
+                                        <span className={clsx(
+                                            "font-medium",
+                                            realtimeStatus === 'connected' ? "text-green-400" : "text-white/40"
+                                        )}>
+                                            {realtimeStatus === 'connected' ? 'Live' : 'Syncing...'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

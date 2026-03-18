@@ -123,64 +123,69 @@ export default function WorkerChatsPage() {
         enabled: !!user
     });
 
+    const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+
     // Realtime Database & Broadcast listener
     useEffect(() => {
         if (!user || !selectedThread) return;
         
-        const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+        const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
         
-        // Ensure we always use a UUID for the Peer
+        // Normalize IDs to prevent "hidden" mismatches
+        const safeUserId = String(user.id).toLowerCase().trim();
         let resolvedClientId = isUUID(selectedThread.clientId) ? selectedThread.clientId : null;
 
         if (!resolvedClientId) {
-            console.log('[REALTIME DEBUG] Worker delaying shared room subscribe until Client UUID is verified...');
+            console.log('[REALTIME DEBUG] Waiting for Client UUID verification...');
             return;
         }
 
-        const finalClientId = resolvedClientId;
-        const sortedIds = [user.id, finalClientId].sort();
+        const finalClientId = String(resolvedClientId).toLowerCase().trim();
+        const sortedIds = [safeUserId, finalClientId].sort();
         const roomChannelName = `room:${sortedIds[0]}-${sortedIds[1]}`;
 
-        console.log(`[REALTIME DEBUG] Worker joining shared room: ${roomChannelName}`);
+        console.log(`[REALTIME DEBUG] Worker joining bulletproof room: ${roomChannelName}`);
+        setRealtimeStatus('connecting');
 
         // Listen for new messages where the worker is the receiver
         const channel = supabase
             .channel(roomChannelName)
-            // 1. Listen for Instant Broadcasts (Fast)
+            // 1. Listen for Instant Broadcasts
             .on('broadcast', { event: 'dm-receive' }, (payload) => {
                 const msg = payload.payload as any;
-                console.log('[REALTIME DEBUG] Worker received broadcast:', msg);
-                setMessages(prev => {
-                    if (prev.find(m => m.id === msg.id)) return prev;
-                    return [...prev, {
-                        id: msg.id,
-                        text: msg.content,
-                        sender: 'client',
-                        timestamp: new Date(msg.timestamp).toISOString()
-                    }];
-                });
-                setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
+                if (String(msg.senderId).toLowerCase().trim() === finalClientId) {
+                    setMessages(prev => {
+                        if (prev.find(m => m.id === msg.id)) return prev;
+                        return [...prev, {
+                            id: msg.id,
+                            text: msg.content,
+                            sender: 'client',
+                            timestamp: new Date(msg.timestamp).toISOString()
+                        }];
+                    });
+                    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
+                }
             })
             // 2. Listen for Typing Indicators
             .on('broadcast', { event: 'typing' }, (payload) => {
-                if (payload.payload.senderId !== user.id) {
+                if (String(payload.payload.senderId).toLowerCase().trim() !== safeUserId) {
                     setIsTyping(payload.payload.isTyping);
                 }
             })
-            // 3. Listen for Database Changes (Robust)
+            // 3. Listen for Database Changes
             .on(
                 'postgres_changes',
                 {
                     event: 'INSERT',
                     schema: 'public',
                     table: 'messages',
-                    filter: `receiver_id=eq.${user.id}`
+                    filter: `receiver_id=eq.${safeUserId}`
                 },
                 (payload) => {
                     const record = payload.new as any;
-                    console.log('[REALTIME DEBUG] Worker received DB change:', record);
+                    console.log('[REALTIME DB] Worker received change:', record);
                     
-                    if (record.sender_id === finalClientId) {
+                    if (String(record.sender_id).toLowerCase().trim() === finalClientId) {
                         setMessages(prev => {
                             if (prev.find(m => m.id === record.id)) return prev;
                             return [...prev, {
@@ -195,14 +200,17 @@ export default function WorkerChatsPage() {
                 }
             )
             .subscribe((status) => {
-                console.log(`[REALTIME DEBUG] Worker Room Subscription [${roomChannelName}]:`, status);
+                console.log(`[REALTIME DEBUG] Worker status [${roomChannelName}]:`, status);
                 if (status === 'SUBSCRIBED') {
+                    setRealtimeStatus('connected');
                     channelRef.current = channel;
+                } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+                    setRealtimeStatus('error');
                 }
             });
 
         return () => { 
-            console.log('[REALTIME DEBUG] Worker leaving shared room');
+            console.log('[REALTIME DEBUG] Worker exiting room');
             supabase.removeChannel(channel);
             channelRef.current = null;
         };
@@ -368,7 +376,21 @@ export default function WorkerChatsPage() {
                         {selectedThread.clientName.charAt(0)}
                     </div>
                     <div className="flex-1">
-                        <p className="font-bold">{selectedThread.clientName}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="font-bold">{selectedThread.clientName}</p>
+                            <div 
+                                className={`w-2 h-2 rounded-full ${
+                                    realtimeStatus === 'connected' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' :
+                                    realtimeStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500'
+                                }`}
+                                title={`Real-time: ${realtimeStatus}`}
+                            />
+                            <span className={`text-[10px] uppercase tracking-tighter font-bold ${
+                                realtimeStatus === 'connected' ? 'text-green-500' : 'text-white/20'
+                            }`}>
+                                {realtimeStatus === 'connected' ? 'Live' : 'Syncing'}
+                            </span>
+                        </div>
                         <p className="text-xs text-white/40">{selectedThread.serviceType} • {selectedThread.bookingId}</p>
                     </div>
                     {isLocked && (
