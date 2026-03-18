@@ -42,14 +42,24 @@ export function sanitizeText(text: string): string {
 
 /**
  * SECURITY: Server-Side Session Validation
- * Verifies the Supabase JWT from the request headers to prevent IDOR attacks.
+ * Verifies the Supabase JWT from the request headers or cookies to prevent IDOR attacks.
  */
 export async function getServerUser(request: NextRequest): Promise<SafeUser | null> {
     try {
+        // 1. Try Authorization Header
         const authHeader = request.headers.get('Authorization');
-        const token = authHeader?.split(' ')[1];
+        let token = authHeader?.split(' ')[1];
 
-        if (!token) return null;
+        // 2. Try Cookies (robust fallback for Next.js)
+        if (!token) {
+            token = request.cookies.get('sb-access-token')?.value || 
+                    request.cookies.get('supabase-auth-token')?.value;
+        }
+
+        if (!token) {
+            if (process.env.NODE_ENV === 'production') console.warn('getServerUser: No token found in headers or cookies');
+            return null;
+        }
 
         const { data: { user }, error } = await supabase.auth.getUser(token);
         

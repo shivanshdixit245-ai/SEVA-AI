@@ -54,8 +54,16 @@ export async function POST(request: NextRequest) {
         const user = await getServerUser(request);
         const { bookingId, workerId, workerName } = await request.json();
 
-        if (!user || (user.id !== workerId && user.role !== 'admin')) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user) {
+            console.error('POST /api/v1/worker/jobs: No valid session found');
+            return NextResponse.json({ error: 'Unauthorized: Please log in again to accept jobs' }, { status: 401 });
+        }
+
+        const targetWorkerId = workerId || user.id;
+
+        if (user.id !== targetWorkerId && user.role !== 'admin') {
+            console.warn(`[SECURITY] ID Mismatch: User ${user.id} tried to accept for worker ${targetWorkerId}`);
+            return NextResponse.json({ error: 'Unauthorized: ID mismatch' }, { status: 403 });
         }
 
         if (!bookingId || !workerId) {

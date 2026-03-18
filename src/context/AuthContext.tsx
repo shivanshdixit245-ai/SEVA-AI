@@ -127,8 +127,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const headers: Record<string, string> = {
             'Content-Type': 'application/json'
         };
-        if (user?.token) {
-            headers['Authorization'] = `Bearer ${user.token}`;
+
+        // Priority 1: Current state token
+        let token = user?.token;
+
+        // Priority 2: localStorage fallback (robustness)
+        if (!token && typeof window !== 'undefined') {
+            const saved = localStorage.getItem('sevaai_user');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    token = parsed.token;
+                } catch (e) {}
+            }
+        }
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
         return headers;
     };
