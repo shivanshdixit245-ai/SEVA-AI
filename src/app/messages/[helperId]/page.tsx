@@ -198,6 +198,7 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
             .channel(roomChannelName)
             .on('broadcast', { event: 'dm-receive' }, (payload) => {
                 const msg = payload.payload as DirectMessage;
+                console.log('[REALTIME BROADCAST] Received:', msg);
                 if (String(msg.senderId).toLowerCase().trim() === finalPeerId) {
                     setMessages(prev => {
                         if (prev.find(m => m.id === msg.id)) return prev;
@@ -216,12 +217,18 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
                 {
                     event: 'INSERT',
                     schema: 'public',
-                    table: 'messages',
-                    filter: `receiver_id=eq.${safeUserId}`
+                    table: 'messages'
+                    // ENGINE BYPASS: Remove server-side filter to rule out type-matching bugs
                 },
                 (payload) => {
                     const record = payload.new as any;
-                    if (String(record.sender_id).toLowerCase().trim() === finalPeerId) {
+                    console.log('[REALTIME DB] RAW PACKET RECEIVED:', record);
+                    
+                    const isForMe = String(record.receiver_id).toLowerCase().trim() === safeUserId;
+                    const isFromPeer = String(record.sender_id).toLowerCase().trim() === finalPeerId;
+
+                    if (isForMe && isFromPeer) {
+                        console.log('[REALTIME DB] Match found! Updating UI.');
                         const newMsg: DirectMessage = {
                             id: record.id,
                             senderId: record.sender_id,
@@ -236,6 +243,8 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
                             return [...prev, newMsg].sort((a, b) => a.timestamp - b.timestamp);
                         });
                         setTimeout(() => scrollToBottom(true), 10);
+                    } else {
+                        console.log('[REALTIME DB] Packet ignored (Not for this chat or wrong sender)', { isForMe, isFromPeer });
                     }
                 }
             )

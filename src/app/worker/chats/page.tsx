@@ -178,6 +178,7 @@ export default function WorkerChatsPage() {
             .channel(roomChannelName)
             .on('broadcast', { event: 'dm-receive' }, (payload) => {
                 const msg = payload.payload as any;
+                console.log('[REALTIME BROADCAST] Worker received:', msg);
                 if (String(msg.senderId).toLowerCase().trim() === finalClientId) {
                     setMessages(prev => {
                         if (prev.find(m => m.id === msg.id)) return prev;
@@ -201,12 +202,18 @@ export default function WorkerChatsPage() {
                 {
                     event: 'INSERT',
                     schema: 'public',
-                    table: 'messages',
-                    filter: `receiver_id=eq.${safeUserId}`
+                    table: 'messages'
+                    // ENGINE BYPASS: Remove server-side filter
                 },
                 (payload) => {
                     const record = payload.new as any;
-                    if (String(record.sender_id).toLowerCase().trim() === finalClientId) {
+                    console.log('[REALTIME DB] RAW PACKET RECEIVED BY WORKER:', record);
+                    
+                    const isForMe = String(record.receiver_id).toLowerCase().trim() === safeUserId;
+                    const isFromPeer = String(record.sender_id).toLowerCase().trim() === finalClientId;
+
+                    if (isForMe && isFromPeer) {
+                        console.log('[REALTIME DB] Worker Match found!');
                         setMessages(prev => {
                             if (prev.find(m => m.id === record.id)) return prev;
                             return [...prev, {
@@ -217,6 +224,8 @@ export default function WorkerChatsPage() {
                             }];
                         });
                         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
+                    } else {
+                        console.log('[REALTIME DB] Worker ignored packet', { isForMe, isFromPeer });
                     }
                 }
             )
