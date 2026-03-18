@@ -249,18 +249,6 @@ export default function WorkerChatsPage() {
         };
     }, [user, selectedThread, retryCount, isAuthSynced]);
 
-    // ZERO-FAILURE FALLBACK: Poll for new messages every 3s if Realtime is not 'Live'
-    useEffect(() => {
-        if (!user || !selectedThread || realtimeStatus === 'connected') return;
-
-        console.log('[REALTIME] Safety polling active (Status: ' + realtimeStatus + ')');
-        const interval = setInterval(() => {
-            fetchMessages(selectedThread.clientId).catch(() => {});
-        }, 3000);
-
-        return () => clearInterval(interval);
-    }, [user, selectedThread, realtimeStatus]);
-
     const fetchMessages = async (clientId: string) => {
         if (!user) return;
         try {
@@ -289,6 +277,18 @@ export default function WorkerChatsPage() {
             setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
         } catch {}
     };
+
+    // ZERO-FAILURE FALLBACK: Poll for new messages every 4s (Safety Net)
+    useEffect(() => {
+        if (!user || !selectedThread) return;
+
+        console.log('[REALTIME] Safety polling active (Every 4s)');
+        const interval = setInterval(() => {
+            fetchMessages(selectedThread.clientId).catch(() => {});
+        }, 4000);
+
+        return () => clearInterval(interval);
+    }, [user, selectedThread, fetchMessages]);
 
     const handleSelectThread = async (thread: ChatThread) => {
         setSelectedThread(thread);

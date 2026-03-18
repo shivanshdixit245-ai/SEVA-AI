@@ -272,17 +272,17 @@ export default function DirectMessagePage({ params }: { params: Promise<{ helper
         scrollToBottom();
     }, [messages]);
 
-    // ZERO-FAILURE FALLBACK: Poll for new messages every 3s if Realtime is not 'Live'
+    // ZERO-FAILURE FALLBACK: Poll for new messages every 4s (Safety Net)
     useEffect(() => {
-        if (!user || realtimeStatus === 'connected') return;
+        if (!user) return;
 
-        console.log('[REALTIME] Safety polling active (Status: ' + realtimeStatus + ')');
+        console.log('[REALTIME] Safety polling active (Every 4s)');
         const interval = setInterval(() => {
             fetchMessages().catch(() => {});
-        }, 3000);
+        }, 4000);
 
         return () => clearInterval(interval);
-    }, [user, realtimeStatus, fetchMessages]);
+    }, [user, fetchMessages]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInputText(e.target.value);

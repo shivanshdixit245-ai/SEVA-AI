@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
-import { getServerUser, sanitizeText } from '@/lib/auth';
+import { getServerUser, sanitizeText, resolveToUuid } from '@/lib/auth';
 import { Booking } from '@/types/booking';
 
 function estimatePrice(serviceType: string): number {
@@ -22,15 +22,18 @@ export async function GET(request: NextRequest) {
     try {
         const user = await getServerUser(request);
         const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('userId');
-        const workerId = searchParams.get('workerId');
+        const rawUserId = searchParams.get('userId');
+        const rawWorkerId = searchParams.get('workerId');
         const status = searchParams.get('status');
         
+        // Resolve Slugs to UUIDs for Supabase consistency
+        const userId = await resolveToUuid(rawUserId || '') || rawUserId;
+        const workerId = await resolveToUuid(rawWorkerId || '') || rawWorkerId;
+
         // SECURITY: Verify session and ownership
         const userRole = String(user?.role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
         const isSelf = user?.id && (user.id === userId || user.id === workerId);
-        // LOOSENED: Any authenticated user can see pending jobs to discover work
         const isFetchingPendingWork = status === 'pending_acceptance';
 
         if (!user && process.env.NODE_ENV === 'production') {
@@ -44,26 +47,25 @@ export async function GET(request: NextRequest) {
 
         const isAdminDebug = isAdmin || (process.env.NODE_ENV === 'development' && (!userId && !workerId));
 
-        // 1. PRIMARY: Fetch from Supabase (Stupidly fast)
+        // 1. Fetch from Supabase
+        let supabaseBookings: Booking[] = [];
         try {
-            let query = supabaseAdmin.from('bookings').select('*').order('created_at', { ascending: false });
+            let query = supabaseAdmin.from('bookings').select('*');
             
             if (!isAdminDebug) {
                 if (userId) query = query.eq('user_id', userId);
                 if (workerId) query = query.eq('worker_id', workerId);
-                if (status) query = query.eq('status', status);
-            } else if (status) {
-                query = query.eq('status', status);
             }
-
+            if (status) query = query.eq('status', status);
+            query = query.order('created_at', { ascending: false });
 
             const { data, error } = await query;
             
-            if (!error && data && data.length > 0) {
-                const normalized = data.map(b => ({
+            if (!error && data) {
+                supabaseBookings = data.map(b => ({
                     ...b,
                     userId: b.user_id,
-                    helperId: b.worker_id || b.helper_id, // Hardened mapping
+                    helperId: b.worker_id || b.helper_id,
                     scheduledDate: b.scheduled_date,
                     createdAt: b.created_at,
                     serviceType: b.service_type,
@@ -78,16 +80,13 @@ export async function GET(request: NextRequest) {
                     acceptedAt: b.accepted_at,
                     id: b.id
                 }));
-                return NextResponse.json(normalized);
             }
-            if (error) console.error(`GET Bookings: Supabase Error: ${error.message}`);
         } catch (err: any) {
             console.error(`GET Bookings: Supabase Fetch Error: ${err.message}`);
         }
 
-        // 2. SECONDARY: Fallback to MongoDB only if Supabase is empty/fails
-        let allResults: Booking[] = [];
-        
+        // 2. Fetch from MongoDB (Always Union)
+        let mongoBookings: Booking[] = [];
         try {
             const db = await getDb();
             const filter: any = {};
@@ -96,21 +95,16 @@ export async function GET(request: NextRequest) {
                 const orConditions: any[] = [];
                 if (userId) orConditions.push({ userId }, { user_id: userId });
                 if (workerId) orConditions.push({ workerId }, { worker_id: workerId }, { helperId: workerId }, { helper_id: workerId });
-                
-                if (orConditions.length > 0) {
-                    filter.$or = orConditions;
-                } else {
-                    // Force no results if no IDs provided and not admin
-                    return NextResponse.json([]);
-                }
+                if (orConditions.length > 0) filter.$or = orConditions;
             }
+            if (status) filter.status = status;
             
-            const mongoBookings = await db.collection('bookings')
+            const results = await db.collection('bookings')
                 .find(filter)
                 .sort({ createdAt: -1 })
                 .toArray();
             
-            const normalizedMongo = mongoBookings.map(b => ({
+            mongoBookings = results.map(b => ({
                 ...b,
                 userId: b.userId || b.user_id,
                 helperId: b.helperId || b.helper_id,
@@ -119,15 +113,21 @@ export async function GET(request: NextRequest) {
                 serviceType: b.serviceType || b.service_type,
                 id: b.id || b._id?.toString()
             })) as unknown as Booking[];
-            allResults = normalizedMongo;
         } catch (dbErr: any) {
-            console.error(`GET Bookings: MongoDB fallback Failed: ${dbErr.message}`);
+            console.error(`GET Bookings: MongoDB Fetch Failed: ${dbErr.message}`);
         }
 
-        const uniqueBookings = Array.from(new Map(allResults.map(b => [b.id, b])).values());
-        uniqueBookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        // 3. UNION AND DEDUPLICATE (Solid Gold Persistence)
+        const combined = [...supabaseBookings, ...mongoBookings];
+        const uniqueMap = new Map();
+        combined.forEach(b => {
+            if (!uniqueMap.has(b.id)) uniqueMap.set(b.id, b);
+        });
 
-        return NextResponse.json(uniqueBookings);
+        const finalResults = Array.from(uniqueMap.values());
+        finalResults.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        return NextResponse.json(finalResults);
     } catch (error: any) {
         console.error('Bookings API Error:', error);
         return NextResponse.json({ error: 'Failed to fetch bookings', details: error.message }, { status: 500 });
@@ -144,6 +144,9 @@ export async function POST(request: Request) {
             }, { status: 400 });
         }
 
+        // Resolve Slug to UUID before saving to Supabase
+        const resolvedUserId = await resolveToUuid(bookingData.userId) || bookingData.userId;
+
         // Enrich booking data
         const newBooking: Booking = {
             id: `BK-${crypto.randomUUID().split('-')[0].toUpperCase()}`,
@@ -152,8 +155,11 @@ export async function POST(request: Request) {
             scheduledDate: bookingData.date || new Date(Date.now() + 86400000).toISOString(),
             otp: String(Math.floor(1000 + Math.random() * 9000)),
             price: estimatePrice(bookingData.serviceType),
-            ...bookingData,
-            helperId: undefined // No helper until a worker accepts
+            userId: resolvedUserId,
+            serviceType: bookingData.serviceType,
+            description: bookingData.description || '',
+            location: bookingData.location || '',
+            urgency: bookingData.urgency || 'Normal'
         };
 
         // 1. ATOMIC SYNC: Save to Supabase (Sequential)
@@ -171,7 +177,6 @@ export async function POST(request: Request) {
                     location: newBooking.location,
                     created_at: newBooking.createdAt,
                     scheduled_date: newBooking.scheduledDate,
-                    helper_id: newBooking.helperId,
                     price: newBooking.price,
                     otp: newBooking.otp
                 });
@@ -185,9 +190,7 @@ export async function POST(request: Request) {
             console.error(`POST Booking: Supabase Sync Unexpected Error: ${err.message}`);
         }
 
-        // 2. ATOMIC SYNC: Save to MongoDB (Sequential Await)
-        // In production/serverless, background promises can be terminated prematurely.
-        // We await the MongoDB save to ensure data persistence before returning.
+        // 2. ATOMIC SYNC: Save to MongoDB
         let mongoSuccess = false;
         try {
             const db = await getDb();
@@ -231,33 +234,23 @@ export async function DELETE(request: NextRequest) {
         try {
             const db = await getDb();
             await db.collection('bookings').deleteMany({ id: { $in: ids } });
-            console.log('MongoDB: Bookings deleted');
         } catch (err) {
             console.error('MongoDB: Failed to delete bookings', err);
         }
 
         // 2. Delete from Supabase
-        const allSupabaseTables = ['bookings', 'confirmed_bookings', 'in_progress_bookings', 'completed_bookings'];
-        for (const table of allSupabaseTables) {
+        const tables = ['bookings', 'confirmed_bookings', 'in_progress_bookings', 'completed_bookings'];
+        for (const table of tables) {
             try {
-                const { error } = await supabaseAdmin
-                    .from(table)
-                    .delete()
-                    .in('id', ids);
-
-                if (error) {
-                    console.error(`Supabase '${table}': Failed to delete bookings`, error);
-                } else {
-                    console.log(`Supabase '${table}': Bookings deleted`);
-                }
+                await supabaseAdmin.from(table).delete().in('id', ids);
             } catch (err) {
-                console.error(`Supabase '${table}': Unexpected error deleting bookings`, err);
+                console.error(`Supabase: Failed to delete from ${table}`);
             }
         }
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        console.error('Delete Booking API Error:', error);
-        return NextResponse.json({ error: 'Failed to delete bookings', details: error.message }, { status: 500 });
+        console.error('Delete Booking Error:', error);
+        return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
     }
 }
