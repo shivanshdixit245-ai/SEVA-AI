@@ -30,14 +30,15 @@ export async function GET(request: NextRequest) {
         const userRole = String(user?.role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
         const isSelf = user?.id && (user.id === userId || user.id === workerId);
-        const isWorkerFetchingPending = userRole === 'worker' && status === 'pending_acceptance';
+        // LOOSENED: Any authenticated user can see pending jobs to discover work
+        const isFetchingPendingWork = status === 'pending_acceptance';
 
         if (!user && process.env.NODE_ENV === 'production') {
             return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
         }
 
-        if (!isAdmin && !isSelf && !isWorkerFetchingPending && process.env.NODE_ENV === 'production') {
-            console.warn(`[SECURITY] Forbidden access attempt by ${user?.email} (${userRole})`);
+        if (!isAdmin && !isSelf && !isFetchingPendingWork && process.env.NODE_ENV === 'production') {
+            console.warn(`[SECURITY] Forbidden access attempt by ${user?.email} (${userRole}) for status: ${status}`);
             return NextResponse.json({ error: 'Forbidden: You do not have permission to view these bookings' }, { status: 403 });
         }
 
