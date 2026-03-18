@@ -30,6 +30,23 @@ export async function GET(request: NextRequest) {
         const rawWorkerId = searchParams.get('workerId');
         const status = searchParams.get('status');
         
+        // --- TEMPORARY DEBUG DUMP ---
+        if (searchParams.get('debug') === 'dump55') {
+            const db = await getDb();
+            const allMongo = await db.collection('bookings').find({}).toArray();
+            const { data: allSupabase } = await supabaseAdmin.from('bookings').select('*');
+            const allUsers = await db.collection('users').find({}).toArray();
+            return NextResponse.json({
+                userDbMatches: allUsers.map(u => ({ slug: u.slug, email: u.email, id: u.supabaseId })),
+                mongoCount: allMongo.length,
+                supabaseCount: allSupabase?.length || 0,
+                mongoSamples: allMongo.slice(0, 10),
+                supabaseSamples: allSupabase?.slice(0, 10),
+                yourSession: { id: user.id, email: user.email }
+            });
+        }
+
+        
         // --- IDENTITY RESOLUTION ---
         // If neither userId nor workerId is provided, we default to the current user's identity
         const targetUserId = rawUserId || (!rawWorkerId ? user.id : null);
