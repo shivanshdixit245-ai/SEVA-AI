@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
-import { getServerUser, sanitizeText, resolveToUuid } from '@/lib/auth';
+import { getServerUser, sanitizeText, resolveToUuid, resolveFullIdentity } from '@/lib/auth';
 import { DirectMessage } from '@/types/booking';
 
 // Memory Cache for ultra-fast "instant" chat history
@@ -19,36 +19,44 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Missing userId or helperId' }, { status: 400 });
         }
 
-        // Resolve Slugs to UUIDs
-        const userId = await resolveToUuid(rawUserId) || rawUserId;
-        const helperId = await resolveToUuid(rawHelperId) || rawHelperId;
+        // UNIVERSAL IDENTITY RESOLUTION: Find all possible aliases
+        const userPool = await resolveFullIdentity(rawUserId);
+        const helperPool = await resolveFullIdentity(rawHelperId);
 
-        // SECURITY: Verify session and involvement in the conversation
+        // Aliases for Supabase checks
+        const uAs = [userPool.uuid, userPool.slug].filter(Boolean) as string[];
+        const hAs = [helperPool.uuid, helperPool.slug].filter(Boolean) as string[];
+
+        // SECURITY: Verify session and involvement
         const isAdmin = user?.role === 'admin';
-        const isParticipant = user?.id && (user.id === userId || user.id === helperId);
+        const isParticipant = user?.id && (
+            (userPool.uuid === user.id) || 
+            (helperPool.uuid === user.id)
+        );
 
         if (!user && process.env.NODE_ENV === 'production') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         if (!isAdmin && !isParticipant && process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ error: 'Forbidden: You can only access your own conversations' }, { status: 403 });
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
         // Cache Check
-        const cacheKey = [userId, helperId].sort().join('-');
+        const cacheKey = [userPool.uuid || rawUserId, helperPool.uuid || rawHelperId].sort().join('-');
         const now = Date.now();
         if (messagesCache[cacheKey] && (now - messagesCache[cacheKey].timestamp < CACHE_TTL)) {
             return NextResponse.json(messagesCache[cacheKey].data);
         }
 
-        // 1. Fetch from Supabase (New Source of Truth)
+        // 1. Fetch from Supabase (Super-Search)
         let supabaseMessages: DirectMessage[] = [];
         try {
+            // Build complex OR for all possible alias permutations
             const { data, error: sErr } = await supabaseAdmin
                 .from('messages')
                 .select('*')
-                .or(`and(sender_id.eq.${userId},receiver_id.eq.${helperId}),and(sender_id.eq.${helperId},receiver_id.eq.${userId})`)
+                .or(`and(sender_id.in.(${uAs.join(',')}),receiver_id.in.(${hAs.join(',')})),and(sender_id.in.(${hAs.join(',')}),receiver_id.in.(${uAs.join(',')}))`)
                 .order('created_at', { ascending: true });
             
             if (data && !sErr) {
@@ -63,32 +71,43 @@ export async function GET(request: NextRequest) {
                 }));
             }
         } catch (err) {
-            console.error('GET Messages: Supabase Fetch FAILED:', err);
+            console.error('GET Messages: Supabase Super-Search FAILED:', err);
         }
 
-        // 2. Fetch from MongoDB (Legacy/Backup)
+        // 2. Fetch from MongoDB (Reconciled)
         let mongoMessages: DirectMessage[] = [];
-        const db = await getDb().catch(err => {
-            console.error('GET Messages: MongoDB connection failed:', err.message);
-            return null;
-        });
-
-        if (db) {
-            mongoMessages = await db.collection('messages')
-                .find({
-                    $or: [
-                        { senderId: userId, receiverId: helperId },
-                        { senderId: helperId, receiverId: userId }
+        try {
+            const db = await getDb();
+            if (db) {
+                const orConditions: any[] = [];
+                // Permutation A (User -> Helper)
+                orConditions.push({
+                    $and: [
+                        { $or: [{ senderId: userPool.uuid }, { senderId: userPool.slug }, { senderId: userPool.email }] },
+                        { $or: [{ receiverId: helperPool.uuid }, { receiverId: helperPool.slug }, { receiverId: helperPool.email }] }
                     ]
-                })
-                .sort({ timestamp: 1 })
-                .toArray() as unknown as DirectMessage[];
+                });
+                // Permutation B (Helper -> User)
+                orConditions.push({
+                    $and: [
+                        { $or: [{ senderId: helperPool.uuid }, { senderId: helperPool.slug }, { senderId: helperPool.email }] },
+                        { $or: [{ receiverId: userPool.uuid }, { receiverId: userPool.slug }, { receiverId: userPool.email }] }
+                    ]
+                });
+
+                mongoMessages = await db.collection('messages')
+                    .find({ $or: orConditions })
+                    .sort({ timestamp: 1 })
+                    .toArray() as unknown as DirectMessage[];
+            }
+        } catch (dbErr: any) {
+            console.error(`GET Messages: MongoDB Error: ${dbErr.message}`);
         }
         
-        // 3. Union and Sort (Deduplicate by ID)
+        // 3. Union and Sort (Deduplicate)
         const allMessages = [...mongoMessages, ...supabaseMessages];
         const uniqueMessages = Array.from(new Map(allMessages.map(m => [m.id, m])).values());
-        const sortedMessages = uniqueMessages.sort((a: DirectMessage, b: DirectMessage) => a.timestamp - b.timestamp);
+        const sortedMessages = uniqueMessages.sort((a, b) => a.timestamp - b.timestamp);
 
         // Update Cache
         messagesCache[cacheKey] = { data: sortedMessages, timestamp: now };

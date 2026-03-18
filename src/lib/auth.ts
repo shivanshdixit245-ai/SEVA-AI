@@ -197,15 +197,14 @@ async function getProfileByEmail(email: string): Promise<UserProfile | null> {
 }
 
 /**
- * Robustly resolves a slug, email, or temporary ID to a Supabase UUID.
- * Essential for Realtime sync where both parties must agree on the channel name.
+ * Resolves a partial identity (slug, email, or ID) to a full identity set.
+ * Crucial for finding legacy records that might use non-UUID identifiers.
  */
-export async function resolveToUuid(idOrSlug: string): Promise<string | null> {
-    if (!idOrSlug) return null;
+export async function resolveFullIdentity(idOrSlug: string): Promise<{ uuid: string | null; slug: string | null; email: string | null }> {
+    if (!idOrSlug) return { uuid: null, slug: null, email: null };
     
-    // Check if it's already a UUID (v4/v5 format)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (uuidRegex.test(idOrSlug)) return idOrSlug;
+    const isUuid = uuidRegex.test(idOrSlug);
 
     try {
         const db = await getDb();
@@ -217,11 +216,28 @@ export async function resolveToUuid(idOrSlug: string): Promise<string | null> {
                 { supabaseId: idOrSlug }
             ]
         });
-        return user?.supabaseId || user?.id || null;
+
+        return {
+            uuid: user?.supabaseId || (isUuid ? idOrSlug : null),
+            slug: user?.slug || (!isUuid && !idOrSlug.includes('@') ? idOrSlug : null),
+            email: user?.email || (idOrSlug.includes('@') ? idOrSlug.toLowerCase() : null)
+        };
     } catch (err) {
-        console.error('resolveToUuid Error:', err);
-        return null;
+        console.error('resolveFullIdentity Error:', err);
+        return { 
+            uuid: isUuid ? idOrSlug : null,
+            slug: !isUuid && !idOrSlug.includes('@') ? idOrSlug : null,
+            email: idOrSlug.includes('@') ? idOrSlug.toLowerCase() : null
+        };
     }
+}
+
+/**
+ * Legacy wrapper for resolveFullIdentity.
+ */
+export async function resolveToUuid(idOrSlug: string): Promise<string | null> {
+    const identity = await resolveFullIdentity(idOrSlug);
+    return identity.uuid;
 }
 
 // ─── Auth Operations ───────────────────────────────────────────────────────

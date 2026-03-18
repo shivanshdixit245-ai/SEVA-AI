@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getDb } from '@/lib/mongodb';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
-import { getServerUser, sanitizeText, resolveToUuid } from '@/lib/auth';
+import { getServerUser, sanitizeText, resolveToUuid, resolveFullIdentity } from '@/lib/auth';
 import { Booking } from '@/types/booking';
 
 function estimatePrice(serviceType: string): number {
@@ -26,42 +26,49 @@ export async function GET(request: NextRequest) {
         const rawWorkerId = searchParams.get('workerId');
         const status = searchParams.get('status');
         
-        // Resolve Slugs to UUIDs for Supabase consistency
-        const userId = await resolveToUuid(rawUserId || '') || rawUserId;
-        const workerId = await resolveToUuid(rawWorkerId || '') || rawWorkerId;
+        // UNIVERSAL IDENTITY RESOLUTION: Find all possible aliases (UUID, Slug, Email)
+        const userPool = rawUserId ? await resolveFullIdentity(rawUserId) : null;
+        const workerPool = rawWorkerId ? await resolveFullIdentity(rawWorkerId) : null;
+
+        // IDs for Supabase checks
+        const userAliases = [userPool?.uuid, userPool?.slug].filter(Boolean) as string[];
+        const workerAliases = [workerPool?.uuid, workerPool?.slug].filter(Boolean) as string[];
 
         // SECURITY: Verify session and ownership
         const userRole = String(user?.role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const isSelf = user?.id && (user.id === userId || user.id === workerId);
+        // Ownership check: session user UUID must match one of the queried pools
+        const isSelf = user?.id && (
+            (userPool?.uuid === user.id) || 
+            (workerPool?.uuid === user.id)
+        );
         const isFetchingPendingWork = status === 'pending_acceptance';
 
         if (!user && process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         if (!isAdmin && !isSelf && !isFetchingPendingWork && process.env.NODE_ENV === 'production') {
-            console.warn(`[SECURITY] Forbidden access attempt by ${user?.email} (${userRole}) for status: ${status}`);
-            return NextResponse.json({ error: 'Forbidden: You do not have permission to view these bookings' }, { status: 403 });
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const isAdminDebug = isAdmin || (process.env.NODE_ENV === 'development' && (!userId && !workerId));
+        const isAdminDebug = isAdmin || (process.env.NODE_ENV === 'development' && (!rawUserId && !rawWorkerId));
 
-        // 1. Fetch from Supabase
+        // 1. Fetch from Supabase (Super-Search)
         let supabaseBookings: Booking[] = [];
         try {
             let query = supabaseAdmin.from('bookings').select('*');
             
             if (!isAdminDebug) {
-                if (userId) query = query.eq('user_id', userId);
-                if (workerId) query = query.eq('worker_id', workerId);
+                // Use .in() for multi-alias search
+                if (userAliases.length > 0) query = query.in('user_id', userAliases);
+                if (workerAliases.length > 0) query = query.in('worker_id', workerAliases);
             }
             if (status) query = query.eq('status', status);
             query = query.order('created_at', { ascending: false });
 
-            const { data, error } = await query;
-            
-            if (!error && data) {
+            const { data, error: sErr } = await query;
+            if (data && !sErr) {
                 supabaseBookings = data.map(b => ({
                     ...b,
                     userId: b.user_id,
@@ -82,10 +89,10 @@ export async function GET(request: NextRequest) {
                 }));
             }
         } catch (err: any) {
-            console.error(`GET Bookings: Supabase Fetch Error: ${err.message}`);
+            console.error(`GET Bookings: Supabase Error: ${err.message}`);
         }
 
-        // 2. Fetch from MongoDB (Always Union)
+        // 2. Fetch from MongoDB (Full Identity Reconciliation)
         let mongoBookings: Booking[] = [];
         try {
             const db = await getDb();
@@ -93,17 +100,21 @@ export async function GET(request: NextRequest) {
             
             if (!isAdminDebug) {
                 const orConditions: any[] = [];
-                if (userId) orConditions.push({ userId }, { user_id: userId });
-                if (workerId) orConditions.push({ workerId }, { worker_id: workerId }, { helperId: workerId }, { helper_id: workerId });
+                // Check all possible aliases in MongoDB
+                if (userPool) {
+                    if (userPool.uuid) orConditions.push({ userId: userPool.uuid }, { user_id: userPool.uuid });
+                    if (userPool.slug) orConditions.push({ userId: userPool.slug }, { user_id: userPool.slug });
+                    if (userPool.email) orConditions.push({ userId: userPool.email }, { email: userPool.email });
+                }
+                if (workerPool) {
+                    if (workerPool.uuid) orConditions.push({ workerId: workerPool.uuid }, { worker_id: workerPool.uuid }, { helperId: workerPool.uuid });
+                    if (workerPool.slug) orConditions.push({ workerId: workerPool.slug }, { worker_id: workerPool.slug }, { helperId: workerPool.slug });
+                }
                 if (orConditions.length > 0) filter.$or = orConditions;
             }
             if (status) filter.status = status;
             
-            const results = await db.collection('bookings')
-                .find(filter)
-                .sort({ createdAt: -1 })
-                .toArray();
-            
+            const results = await db.collection('bookings').find(filter).sort({ createdAt: -1 }).toArray();
             mongoBookings = results.map(b => ({
                 ...b,
                 userId: b.userId || b.user_id,
@@ -114,14 +125,14 @@ export async function GET(request: NextRequest) {
                 id: b.id || b._id?.toString()
             })) as unknown as Booking[];
         } catch (dbErr: any) {
-            console.error(`GET Bookings: MongoDB Fetch Failed: ${dbErr.message}`);
+            console.error(`GET Bookings: MongoDB Error: ${dbErr.message}`);
         }
 
-        // 3. UNION AND DEDUPLICATE (Solid Gold Persistence)
+        // 3. UNION AND DEDUPLICATE (Total Coverage)
         const combined = [...supabaseBookings, ...mongoBookings];
         const uniqueMap = new Map();
         combined.forEach(b => {
-            if (!uniqueMap.has(b.id)) uniqueMap.set(b.id, b);
+             if (!uniqueMap.has(b.id)) uniqueMap.set(b.id, b);
         });
 
         const finalResults = Array.from(uniqueMap.values());
