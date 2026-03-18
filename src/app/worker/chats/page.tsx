@@ -249,6 +249,18 @@ export default function WorkerChatsPage() {
         };
     }, [user, selectedThread, retryCount, isAuthSynced]);
 
+    // ZERO-FAILURE FALLBACK: Poll for new messages every 3s if Realtime is not 'Live'
+    useEffect(() => {
+        if (!user || !selectedThread || realtimeStatus === 'connected') return;
+
+        console.log('[REALTIME] Safety polling active (Status: ' + realtimeStatus + ')');
+        const interval = setInterval(() => {
+            fetchMessages(selectedThread.clientId).catch(() => {});
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [user, selectedThread, realtimeStatus]);
+
     const fetchMessages = async (clientId: string) => {
         if (!user) return;
         try {
@@ -257,12 +269,21 @@ export default function WorkerChatsPage() {
             });
             if (res.ok && mountedRef.current) {
                 const data = await res.json();
-                setMessages((data || []).map((m: any) => ({
-                    id: m.id,
-                    text: m.content,
-                    sender: m.senderId === user.id ? 'worker' : 'client',
-                    timestamp: new Date(m.timestamp).toISOString()
-                })));
+                setMessages((prev) => {
+                    const newMessages = (data || []).map((m: any) => ({
+                        id: m.id,
+                        text: m.content,
+                        sender: m.senderId === user.id ? 'worker' : 'client' as 'worker'|'client',
+                        timestamp: new Date(m.timestamp).toISOString()
+                    }));
+                    
+                    // Simple de-duplication: only add if ID not already in state
+                    const existingIds = new Set(prev.map(m => m.id));
+                    const filtered = newMessages.filter((m: any) => !existingIds.has(m.id));
+                    
+                    if (filtered.length === 0) return prev;
+                    return [...prev, ...filtered].sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+                });
             }
 
             setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
